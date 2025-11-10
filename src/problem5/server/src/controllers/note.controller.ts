@@ -4,6 +4,7 @@ import {
     createNoteSchema,
     updateNoteSchema,
     shareNoteSchema,
+    listNotesSchema,
 } from "../types/note.types";
 import { AuthenticatedRequest } from "../types/express";
 
@@ -54,7 +55,8 @@ export class NoteController {
     ) => {
         try {
             const userId = req.userId!;
-            const notes = await this.noteService.getNotes(userId);
+            const query = listNotesSchema.parse(req.query);
+            const notes = await this.noteService.getNotes(userId, query);
             res.status(200).json(notes);
         } catch (error) {
             next(error);

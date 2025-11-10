@@ -1,14 +1,23 @@
-import { Repository } from "typeorm";
+import { Brackets, Repository } from "typeorm";
 import { AppDataSource } from "../libs/data-source";
 import { Note } from "../models/note.model";
 import {
     CreateNoteInput,
     ShareNoteInput,
     UpdateNoteInput,
+    ListNotesInput,
 } from "../types/note.types";
 import { ForbiddenError, NotFoundError } from "../utils/errors";
-import { NoteShare } from "../models/noteShare.model";
+import { NoteShare, Role } from "../models/noteShare.model";
 import { User } from "../models/user.model";
+
+type NoteListItem = Pick<
+    Note,
+    "id" | "title" | "ownerId" | "updatedAt" | "lastVersion" | "isPublic"
+> & {
+    content?: Note["content"];
+    accessRole: Role | "owner";
+};
 
 export class NoteService {
     private readonly noteRepository: Repository<Note>;
@@ -31,33 +40,120 @@ export class NoteService {
         return note;
     }
 
-    async getNoteById(noteId: string, userId: string) {
-        const note = await this.noteRepository.findOne({
-            where: { id: noteId },
-        });
+    async getNoteById(
+        noteId: string,
+        userId: string,
+    ): Promise<Note & { accessRole: Role | "owner" }> {
+        const qb = this.noteRepository
+            .createQueryBuilder("note")
+            .leftJoin(
+                NoteShare,
+                "share",
+                "share.noteId = note.id AND share.userId = :userId",
+                { userId },
+            )
+            .where("note.id = :noteId", { noteId })
+            .addSelect("share.role", "note_share_role");
+
+        const { entities, raw } = await qb.getRawAndEntities();
+        const note = entities[0];
 
         if (!note) {
             throw new NotFoundError("Note not found");
         }
 
-        if (note.ownerId !== userId) {
-            const share = await this.noteShareRepository.findOne({
-                where: { noteId, userId },
-            });
+        const accessRole =
+            note.ownerId === userId
+                ? ("owner" as const)
+                : ((raw[0]?.note_share_role ?? null) as Role | null);
 
-            if (!share) {
-                throw new ForbiddenError("You do not have access to this note");
-            }
+        if (!accessRole) {
+            throw new ForbiddenError("You do not have access to this note");
         }
 
-        return note;
+        Object.assign(note, { accessRole });
+        return note as Note & { accessRole: Role | "owner" };
     }
 
-    async getNotes(userId: string) {
-        const notes = await this.noteRepository.find({
-            where: { ownerId: userId },
+    async getNotes(
+        userId: string,
+        params: ListNotesInput,
+    ): Promise<NoteListItem[]> {
+        const {
+            limit,
+            offset,
+            includeShared,
+            includeContent,
+            search,
+        } = params;
+
+        const qb = this.noteRepository
+            .createQueryBuilder("note")
+            .leftJoin(
+                NoteShare,
+                "share",
+                "share.noteId = note.id AND share.userId = :userId",
+                { userId },
+            )
+            .select([
+                "note.id",
+                "note.title",
+                "note.ownerId",
+                "note.updatedAt",
+                "note.lastVersion",
+                "note.isPublic",
+            ])
+            .addSelect("share.role", "note_share_role")
+            .orderBy("note.updatedAt", "DESC")
+            .skip(offset)
+            .take(limit);
+
+        if (includeContent) {
+            qb.addSelect("note.content");
+        }
+
+        qb.where(
+            new Brackets((expr) => {
+                expr.where("note.ownerId = :userId", { userId });
+
+                if (includeShared) {
+                    expr.orWhere("share.id IS NOT NULL");
+                }
+            }),
+        );
+
+        if (search) {
+            qb.andWhere("note.title ILIKE :search", {
+                search: `%${search}%`,
+            });
+        }
+
+        const { entities, raw } = await qb.getRawAndEntities();
+
+        return entities.map((note, index) => {
+            const shareRole = (raw[index]?.note_share_role ??
+                null) as Role | null;
+            const accessRole =
+                note.ownerId === userId
+                    ? ("owner" as const)
+                    : shareRole ?? "view";
+
+            const payload: NoteListItem = {
+                id: note.id,
+                title: note.title,
+                ownerId: note.ownerId,
+                updatedAt: note.updatedAt,
+                lastVersion: note.lastVersion,
+                isPublic: note.isPublic,
+                accessRole,
+            };
+
+            if (includeContent) {
+                payload.content = note.content;
+            }
+
+            return payload;
         });
-        return notes;
     }
 
     async updateNote(noteId: string, userId: string, data: UpdateNoteInput) {
