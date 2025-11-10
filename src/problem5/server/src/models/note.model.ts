@@ -26,8 +26,6 @@ export class Note {
     @Column({ type: "text" })
     title!: string;
 
-    // Prisma had required Json. If you want to allow null, set `nullable: true`.
-    // If you want "always present", keep nullable: false and provide a default.
     @Column({ type: "jsonb", nullable: false, default: () => "'{}'::jsonb" })
     content!: unknown;
 
@@ -36,7 +34,9 @@ export class Note {
 
     @Column({ type: "boolean", default: false })
     isPublic!: boolean;
-
+    @Index("idx_note_public_updated", ["updatedAt"], {
+        where: '"isPublic" = true',
+    })
     @CreateDateColumn({ type: "timestamptz" })
     createdAt!: Date;
 

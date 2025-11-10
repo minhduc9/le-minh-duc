@@ -5,6 +5,7 @@ import {
     CreateDateColumn,
     ManyToOne,
     Unique,
+    Index,
 } from "typeorm";
 import { Note } from "./note.model";
 import { User } from "./user.model";
@@ -17,9 +18,11 @@ export class NoteShare {
     @PrimaryGeneratedColumn("uuid")
     id!: string;
 
+    @Index("idx_share_note", ["noteId"])
     @Column({ type: "uuid" })
     noteId!: string;
 
+    @Index("idx_share_user", ["userId"])
     @Column({ type: "uuid" })
     userId!: string;
 
