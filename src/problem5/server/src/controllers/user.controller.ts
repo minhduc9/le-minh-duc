@@ -27,7 +27,11 @@ export class UserController {
         try {
             const validatedData = loginSchema.parse(req.body);
             const { user, token } = await this.userService.login(validatedData);
-            res.status(200).json({ user, token });
+            const { id, email, name, createdAt, updatedAt } = user;
+            res.status(201).json({
+                user: { id, email, name, createdAt, updatedAt },
+                token,
+            });
         } catch (error) {
             next(error);
         }

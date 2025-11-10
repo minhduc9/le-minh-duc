@@ -44,7 +44,7 @@ export class UserService {
         const user = await this.userRepository
             .createQueryBuilder("user")
             .addSelect("user.password")
-            .where("user.email = :email", { email: data.email.toLowerCase() })
+            .where("user.email = :email", { email: data.email })
             .getOne();
 
         if (!user) {
