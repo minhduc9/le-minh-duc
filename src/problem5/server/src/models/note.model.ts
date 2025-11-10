@@ -34,6 +34,7 @@ export class Note {
 
     @Column({ type: "boolean", default: false })
     isPublic!: boolean;
+
     @Index("idx_note_public_updated", ["updatedAt"], {
         where: '"isPublic" = true',
     })

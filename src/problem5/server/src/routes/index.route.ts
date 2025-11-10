@@ -1,12 +1,10 @@
 import { Router } from "express";
-import userRoutes from "./user.route";
+import userRouter from "./user.route";
+import noteRouter from "./note.route";
 
 const router = Router();
 
-router.get("/", (req, res) => {
-    res.send("Hello World!");
-});
-
-router.use("/users", userRoutes);
+router.use("/users", userRouter);
+router.use("/notes", noteRouter);
 
 export default router;
