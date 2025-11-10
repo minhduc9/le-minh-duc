@@ -23,6 +23,9 @@ export class User {
     @Column({ type: "text" })
     name!: string;
 
+    @Column({ type: "text", select: false })
+    password!: string;
+
     @CreateDateColumn({ type: "timestamptz" })
     createdAt!: Date;
 
