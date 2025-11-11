@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 interface NoteListItem {
     id: string;
@@ -29,7 +30,11 @@ export class HomePage implements OnInit {
     offset = 0;
     hasMore = true;
 
-    constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+    constructor(
+        private http: HttpClient,
+        private router: Router,
+        private cdr: ChangeDetectorRef,
+    ) {}
 
     ngOnInit() {
         this.loadNotes();
@@ -82,6 +87,7 @@ export class HomePage implements OnInit {
 
     selectNote(note: NoteListItem) {
         this.selectedNote = note;
+        this.router.navigate(['/note', note.id]);
     }
 
     formatDate(value: string) {

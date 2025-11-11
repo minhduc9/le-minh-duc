@@ -1,0 +1,138 @@
+:host {
+    display: block;
+}
+
+.note-page {
+    width: 100%;
+    min-height: 100vh;
+    padding: 2rem clamp(1rem, 4vw, 3rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.note-actions {
+    position: sticky;
+    top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    z-index: 5;
+}
+
+.note-actions button {
+    border: none;
+    border-radius: 999px;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.back-button {
+    background: rgba(255, 255, 255, 0.15);
+    color: inherit;
+}
+
+.back-button:hover {
+    transform: translateY(-1px);
+}
+
+.edit-button {
+    background: var(--accent);
+    color: #0b0f25;
+    font-weight: 600;
+}
+
+.edit-button:hover {
+    transform: translateY(-1px);
+}
+
+.note-view {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2rem;
+    border-radius: 28px;
+    box-shadow: 0 24px 48px rgba(11, 15, 37, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.note-header h1 {
+    margin: 0;
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+}
+
+.note-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.95rem;
+    color: rgba(11, 15, 37, 0.6);
+}
+
+.markdown-body {
+    margin: 0;
+    color: #0b0f25;
+    line-height: 1.7;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.markdown-body p {
+    margin: 0 0 1rem;
+}
+
+.markdown-body ul {
+    margin: 0 0 1rem 1.25rem;
+    padding: 0;
+    list-style: disc;
+}
+
+.markdown-body blockquote {
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid rgba(11, 15, 37, 0.4);
+    background: rgba(11, 15, 37, 0.05);
+}
+
+.markdown-body code,
+.markdown-body pre {
+    background: rgba(5, 7, 17, 0.06);
+    border-radius: 8px;
+    padding: 0.45rem 0.65rem;
+    font-family: 'JetBrains Mono', 'SFMono-Regular', monospace;
+    font-size: 0.85rem;
+}
+
+.markdown-body pre {
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.status {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.status.error {
+    color: #ff7a7a;
+}
+
+.empty-state {
+    margin: 0;
+    color: rgba(11, 15, 37, 0.55);
+}
