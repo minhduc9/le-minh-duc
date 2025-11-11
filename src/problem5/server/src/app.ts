@@ -5,10 +5,12 @@ import { AppDataSource } from "./libs/data-source";
 import { HttpError } from "./utils/errors";
 import { initializeSocketServer } from "./libs/socket";
 import { initializeNoteProcessing } from "./services/note.process";
+import { corsMiddleware } from "./config/cors";
 
 const app = express();
 const server = http.createServer(app);
 
+app.use(corsMiddleware);
 app.use(express.json());
 
 AppDataSource.initialize()
