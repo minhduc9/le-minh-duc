@@ -39,5 +39,15 @@ services:
       - postgres
       - redis
 
+  note-app:
+    build:
+      context: ./note-app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - server
+
 volumes:
   postgres_data:
