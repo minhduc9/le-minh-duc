@@ -3,7 +3,7 @@
         <button type="button" class="back-button" (click)="goBack()">← Back</button>
         <div class="note-actions__group">
             <button
-                *ngIf="!editing && !publicViewOnly"
+                *ngIf="!editing && canEditNote"
                 type="button"
                 class="edit-button"
                 (click)="startEditing()"
@@ -176,7 +176,7 @@
                     />
                 </ng-template>
                 <div class="note-meta">
-                    <span>Owner</span>
+                    <span>{{ formatRoleLabel(note.accessRole) }}</span>
                     <span>Updated {{ formatDate(note.updatedAt) }}</span>
                 </div>
             </header>

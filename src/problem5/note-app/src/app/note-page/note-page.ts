@@ -322,11 +322,16 @@ export class NotePage implements OnInit, OnDestroy {
             });
     }
 
+    get canEditNote() {
+        return (
+            !!this.note &&
+            (this.note.accessRole === 'owner' || this.note.accessRole === 'edit') &&
+            !this.publicViewOnly
+        );
+    }
+
     startEditing() {
-        if (!this.note) {
-            return;
-        }
-        if (this.publicViewOnly) {
+        if (!this.note || !this.canEditNote) {
             return;
         }
         this.editing = true;
@@ -519,7 +524,11 @@ export class NotePage implements OnInit, OnDestroy {
         this.http.get<NoteDetail>(`http://localhost:3000/notes/public/${noteId}`).subscribe({
             next: (note) => {
                 this.publicViewOnly = true;
-                this.syncNoteView(note);
+                const normalized: NoteDetail = {
+                    ...note,
+                    accessRole: 'view',
+                };
+                this.syncNoteView(normalized);
                 this.loading = false;
                 this.errorMessage = undefined;
                 this.cdr.markForCheck();
