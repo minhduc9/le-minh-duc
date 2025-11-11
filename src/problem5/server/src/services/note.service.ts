@@ -217,7 +217,7 @@ export class NoteService {
         }
 
         const userToShareWith = await this.userRepository.findOne({
-            where: { id: data.userId },
+            where: { email: data.email },
         });
 
         if (!userToShareWith) {
@@ -225,7 +225,7 @@ export class NoteService {
         }
 
         const existingShare = await this.noteShareRepository.findOne({
-            where: { noteId, userId: data.userId },
+            where: { noteId, userId: userToShareWith.id },
         });
 
         if (existingShare) {
@@ -236,7 +236,7 @@ export class NoteService {
 
         const noteShare = this.noteShareRepository.create({
             noteId,
-            userId: data.userId,
+            userId: userToShareWith.id,
             role: data.role,
         });
 
@@ -247,7 +247,7 @@ export class NoteService {
     async unshareNote(
         noteId: string,
         ownerId: string,
-        userIdToUnshare: string,
+        userEmailToUnshare: string,
     ) {
         const note = await this.noteRepository.findOne({
             where: { id: noteId, ownerId },
@@ -257,8 +257,16 @@ export class NoteService {
             throw new NotFoundError("Note not found or you are not the owner");
         }
 
+        const userToUnshare = await this.userRepository.findOne({
+            where: { email: userEmailToUnshare },
+        });
+
+        if (!userToUnshare) {
+            throw new NotFoundError("User to unshare with not found");
+        }
+
         const share = await this.noteShareRepository.findOne({
-            where: { noteId, userId: userIdToUnshare },
+            where: { noteId, userId: userToUnshare.id },
         });
 
         if (!share) {

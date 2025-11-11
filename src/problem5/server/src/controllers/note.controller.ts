@@ -124,12 +124,12 @@ export class NoteController {
         next: NextFunction,
     ) => {
         try {
-            const { id, userId } = req.params;
+            const { id, email } = req.params;
             const ownerId = req.userId!;
             const result = await this.noteService.unshareNote(
                 id,
                 ownerId,
-                userId,
+                email,
             );
             res.status(200).json(result);
         } catch (error) {
