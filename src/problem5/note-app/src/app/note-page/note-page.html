@@ -3,7 +3,7 @@
         <button type="button" class="back-button" (click)="goBack()">← Back</button>
         <div class="note-actions__group">
             <button
-                *ngIf="!editing"
+                *ngIf="!editing && !publicViewOnly"
                 type="button"
                 class="edit-button"
                 (click)="startEditing()"
@@ -30,7 +30,7 @@
                 </button>
             </ng-container>
             <button
-                *ngIf="note?.accessRole === 'owner'"
+                *ngIf="note?.accessRole === 'owner' && !publicViewOnly"
                 type="button"
                 class="share-button"
                 (click)="toggleSharePanel()"
@@ -39,13 +39,21 @@
                 {{ sharePanelOpen ? 'Close sharing' : 'Share' }}
             </button>
             <button
-                *ngIf="note?.accessRole === 'owner'"
+                *ngIf="note?.accessRole === 'owner' && !publicViewOnly"
                 type="button"
                 class="public-button"
                 (click)="toggleVisibility()"
                 [disabled]="togglingVisibility"
             >
                 {{ note?.isPublic ? 'Make private' : 'Make public' }}
+            </button>
+            <button
+                *ngIf="note?.isPublic"
+                type="button"
+                class="export-button"
+                (click)="copyNoteLink()"
+            >
+                Export
             </button>
         </div>
     </div>
@@ -57,6 +65,12 @@
     </p>
     <p *ngIf="visibilityError" class="status warning">
         {{ visibilityError }}
+    </p>
+    <p *ngIf="copyLinkMessage" class="status subtle">
+        {{ copyLinkMessage }}
+    </p>
+    <p *ngIf="copyLinkError" class="status warning">
+        {{ copyLinkError }}
     </p>
 
     <div class="share-panel" *ngIf="sharePanelOpen">

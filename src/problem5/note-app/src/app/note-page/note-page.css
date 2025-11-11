@@ -269,6 +269,21 @@
     cursor: not-allowed;
 }
 
+.export-button {
+    border: none;
+    border-radius: 999px;
+    padding: 0.65rem 1.25rem;
+    background: rgba(75, 255, 193, 0.15);
+    color: #14b393;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.export-button:hover {
+    transform: translateY(-1px);
+}
+
 .note-shell {
     display: flex;
     flex-direction: column;

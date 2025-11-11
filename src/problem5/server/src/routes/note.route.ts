@@ -5,6 +5,7 @@ import { authenticate } from "../middlewares/auth.middleware";
 const router = Router();
 const noteController = new NoteController();
 
+router.get("/public/:id", noteController.getPublicNote);
 router.post("/", authenticate, noteController.createNote);
 router.get("/", authenticate, noteController.getNotes);
 router.get("/:id", authenticate, noteController.getNoteById);

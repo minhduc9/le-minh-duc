@@ -315,6 +315,23 @@ export class NoteService {
         return note;
     }
 
+    async getPublicNote(noteId: string) {
+        const note = await this.noteRepository.findOne({
+            where: { id: noteId },
+        });
+
+        if (!note) {
+            throw new NotFoundError("Note not found");
+        }
+
+        if (!note.isPublic) {
+            throw new ForbiddenError("Note is not public");
+        }
+
+        Object.assign(note, { accessRole: "view" as const });
+        return note as Note & { accessRole: Role | "owner" };
+    }
+
     async listNoteShares(noteId: string, ownerId: string) {
         const note = await this.noteRepository.findOne({
             where: { id: noteId, ownerId },

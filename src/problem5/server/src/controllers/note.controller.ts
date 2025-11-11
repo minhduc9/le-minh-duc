@@ -1,4 +1,4 @@
-import { NextFunction, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { NoteService } from "../services/note.service";
 import {
     createNoteSchema,
@@ -44,6 +44,20 @@ export class NoteController {
             const { id } = req.params;
             const userId = req.userId!;
             const note = await this.noteService.getNoteById(id, userId);
+            res.status(200).json(note);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    getPublicNote = async (
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        try {
+            const { id } = req.params;
+            const note = await this.noteService.getPublicNote(id);
             res.status(200).json(note);
         } catch (error) {
             next(error);

@@ -64,6 +64,9 @@ export class NotePage implements OnInit, OnDestroy {
     visibilityMessage?: string;
     visibilityError?: string;
     togglingVisibility = false;
+    copyLinkMessage?: string;
+    copyLinkError?: string;
+    publicViewOnly = false;
 
     private readonly currentUserId?: string;
     private noteId?: string;
@@ -323,6 +326,9 @@ export class NotePage implements OnInit, OnDestroy {
         if (!this.note) {
             return;
         }
+        if (this.publicViewOnly) {
+            return;
+        }
         this.editing = true;
         this.saveError = undefined;
         this.titleInput = this.note.title;
@@ -471,26 +477,56 @@ export class NotePage implements OnInit, OnDestroy {
     }
 
     private loadNote(noteId: string) {
-        if (!this.token) {
-            this.errorMessage = 'Session expired. Please log in again.';
-            this.cdr.markForCheck();
+        this.loading = true;
+        const token = this.token;
+
+        if (!token) {
+            this.loadPublicNote(noteId);
             return;
         }
 
-        this.loading = true;
-        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        this.publicViewOnly = false;
 
-        this.http.get<NoteDetail>(`http://localhost:3000/notes/${noteId}`, { headers }).subscribe({
+        this.http
+            .get<NoteDetail>(`http://localhost:3000/notes/${noteId}`, { headers })
+            .subscribe({
+                next: (note) => {
+                    this.syncNoteView(note);
+                    this.loading = false;
+                    this.errorMessage = undefined;
+                    this.cdr.markForCheck();
+                },
+                error: (error) => {
+                    if (
+                        error instanceof HttpErrorResponse &&
+                        (error.status === 401 || error.status === 403)
+                    ) {
+                        this.loadPublicNote(noteId);
+                        return;
+                    }
+
+                    this.errorMessage = 'Unable to load the note right now.';
+                    this.loading = false;
+                    this.cdr.markForCheck();
+                },
+            });
+    }
+
+    private loadPublicNote(noteId: string) {
+        this.loading = true;
+
+        this.http.get<NoteDetail>(`http://localhost:3000/notes/public/${noteId}`).subscribe({
             next: (note) => {
+                this.publicViewOnly = true;
                 this.syncNoteView(note);
                 this.loading = false;
                 this.errorMessage = undefined;
                 this.cdr.markForCheck();
             },
             error: () => {
-                this.errorMessage = 'Unable to load the note right now.';
                 this.loading = false;
-                this.cdr.markForCheck();
+                this.router.navigate(['/login']);
             },
         });
     }
@@ -509,13 +545,13 @@ export class NotePage implements OnInit, OnDestroy {
 
         this.shareListSub?.unsubscribe();
         this.shareListLoading = true;
-        this.shareListError = undefined;
-        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
+            this.shareListError = undefined;
+            const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
 
-        this.shareListSub = this.http
-            .get<NoteShareInfo[]>(`http://localhost:3000/notes/${this.noteId}/share`, {
-                headers,
-            })
+            this.shareListSub = this.http
+                .get<NoteShareInfo[]>(`http://localhost:3000/notes/${this.noteId}/share`, {
+                    headers,
+                })
             .subscribe({
                 next: (shares) => {
                     this.shareList = shares;
@@ -594,6 +630,55 @@ export class NotePage implements OnInit, OnDestroy {
             }
         }
         return fallback;
+    }
+
+    copyNoteLink() {
+        if (!this.note) {
+            return;
+        }
+
+        const link = `${window.location.origin}/note/${this.note.id}`;
+        this.copyLinkError = undefined;
+
+        const handleSuccess = () => {
+            this.copyLinkMessage = 'Link copied to clipboard.';
+            this.cdr.markForCheck();
+        };
+
+        const handleFailure = (message: string) => {
+            this.copyLinkError = message;
+            this.cdr.markForCheck();
+        };
+
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard
+                .writeText(link)
+                .then(() => handleSuccess())
+                .catch(() => handleFailure('Unable to copy the link.'));
+        } else {
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = link;
+                textarea.style.position = 'fixed';
+                textarea.style.top = '0';
+                textarea.style.left = '0';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                if (success) {
+                    handleSuccess();
+                    return;
+                }
+            } catch (error) {
+                void error;
+            }
+
+            handleFailure('Unable to copy the link.');
+        }
     }
 
     private convertMarkdown(text: string): string {
