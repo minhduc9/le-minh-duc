@@ -3,6 +3,7 @@ import { NoteService } from "../services/note.service";
 import {
     createNoteSchema,
     listNotesSchema,
+    publicNoteSchema,
     shareNoteSchema,
     shareUpdateSchema,
     updateNoteSchema,
@@ -150,6 +151,26 @@ export class NoteController {
                 payload,
             );
             res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    toggleVisibility = async (
+        req: AuthenticatedRequest,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        try {
+            const { id } = req.params;
+            const ownerId = req.userId!;
+            const payload = publicNoteSchema.parse(req.body);
+            const note = await this.noteService.toggleNoteVisibility(
+                id,
+                ownerId,
+                payload.isPublic,
+            );
+            res.status(200).json(note);
         } catch (error) {
             next(error);
         }

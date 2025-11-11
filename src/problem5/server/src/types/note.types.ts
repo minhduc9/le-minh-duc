@@ -53,6 +53,9 @@ export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 export type ShareNoteInput = z.infer<typeof shareNoteSchema>;
 export type ShareUpdateInput = z.infer<typeof shareUpdateSchema>;
+export const publicNoteSchema = z.object({
+    isPublic: z.boolean(),
+});
 export type ListNotesInput = z.infer<typeof listNotesSchema>;
 export type NoteShareListItem = {
     id: string;

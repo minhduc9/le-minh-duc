@@ -61,6 +61,9 @@ export class NotePage implements OnInit, OnDestroy {
     shareUpdatingId?: string;
     shareRemovingId?: string;
     accessDeniedMessage?: string;
+    visibilityMessage?: string;
+    visibilityError?: string;
+    togglingVisibility = false;
 
     private readonly currentUserId?: string;
     private noteId?: string;
@@ -255,6 +258,62 @@ export class NotePage implements OnInit, OnDestroy {
                         error,
                         'Unable to share at the moment.'
                     );
+                    this.cdr.markForCheck();
+                },
+            });
+    }
+
+    toggleVisibility() {
+        if (!this.note || this.note.accessRole !== 'owner') {
+            return;
+        }
+
+        if (!this.token) {
+            this.visibilityError = 'Session expired. Please log in again.';
+            this.visibilityMessage = undefined;
+            this.cdr.markForCheck();
+            return;
+        }
+
+        this.visibilityMessage = undefined;
+        this.visibilityError = undefined;
+        this.togglingVisibility = true;
+        const headers = new HttpHeaders().set(
+            'Authorization',
+            `Bearer ${this.token}`,
+        );
+        const targetVisibility = !this.note.isPublic;
+
+        this.http
+            .patch<NoteDetail>(
+                `http://localhost:3000/notes/${this.note.id}/public`,
+                { isPublic: targetVisibility },
+                { headers },
+            )
+            .subscribe({
+                next: (updated) => {
+                    this.togglingVisibility = false;
+                    const normalized: NoteDetail = {
+                        ...updated,
+                        accessRole: this.note?.accessRole ?? 'owner',
+                    };
+                    this.syncNoteView(normalized);
+                    this.visibilityMessage = updated.isPublic
+                        ? 'Note is now public.'
+                        : 'Note is now private.';
+                    this.cdr.markForCheck();
+                },
+                error: (error) => {
+                    this.togglingVisibility = false;
+                    if (error instanceof HttpErrorResponse && error.status === 403) {
+                        this.visibilityError =
+                            'You are not allowed to change visibility.';
+                    } else {
+                        this.visibilityError = this.parseErrorMessage(
+                            error,
+                            'Unable to update visibility right now.',
+                        );
+                    }
                     this.cdr.markForCheck();
                 },
             });

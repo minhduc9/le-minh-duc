@@ -38,10 +38,25 @@
             >
                 {{ sharePanelOpen ? 'Close sharing' : 'Share' }}
             </button>
+            <button
+                *ngIf="note?.accessRole === 'owner'"
+                type="button"
+                class="public-button"
+                (click)="toggleVisibility()"
+                [disabled]="togglingVisibility"
+            >
+                {{ note?.isPublic ? 'Make private' : 'Make public' }}
+            </button>
         </div>
     </div>
     <p *ngIf="accessDeniedMessage" class="status warning">
         {{ accessDeniedMessage }}
+    </p>
+    <p *ngIf="visibilityMessage && !visibilityError" class="status subtle">
+        {{ visibilityMessage }}
+    </p>
+    <p *ngIf="visibilityError" class="status warning">
+        {{ visibilityError }}
     </p>
 
     <div class="share-panel" *ngIf="sharePanelOpen">

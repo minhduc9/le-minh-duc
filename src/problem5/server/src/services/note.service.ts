@@ -297,6 +297,24 @@ export class NoteService {
         return share;
     }
 
+    async toggleNoteVisibility(
+        noteId: string,
+        ownerId: string,
+        isPublic: boolean,
+    ) {
+        const note = await this.noteRepository.findOne({
+            where: { id: noteId, ownerId },
+        });
+
+        if (!note) {
+            throw new NotFoundError("Note not found or you are not the owner");
+        }
+
+        note.isPublic = isPublic;
+        await this.noteRepository.save(note);
+        return note;
+    }
+
     async listNoteShares(noteId: string, ownerId: string) {
         const note = await this.noteRepository.findOne({
             where: { id: noteId, ownerId },

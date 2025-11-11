@@ -29,6 +29,7 @@ export class HomePage implements OnInit {
     limit = 8;
     offset = 0;
     hasMore = true;
+    deletingNoteId?: string;
 
     constructor(
         private http: HttpClient,
@@ -88,6 +89,46 @@ export class HomePage implements OnInit {
     selectNote(note: NoteListItem) {
         this.selectedNote = note;
         this.router.navigate(['/note', note.id]);
+    }
+
+    deleteNote(note: NoteListItem, event?: Event) {
+        event?.stopPropagation();
+        if (note.accessRole !== 'owner') {
+            return;
+        }
+
+        if (!this.token) {
+            this.errorMessage = 'Session expired. Please log in again.';
+            this.cdr.markForCheck();
+            return;
+        }
+
+        if (this.deletingNoteId) {
+            return;
+        }
+
+        this.deletingNoteId = note.id;
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
+
+        this.http
+            .delete<{ message?: string }>(`http://localhost:3000/notes/${note.id}`, {
+                headers,
+            })
+            .subscribe({
+                next: () => {
+                    this.notes = this.notes.filter((item) => item.id !== note.id);
+                    if (this.selectedNote?.id === note.id) {
+                        this.selectedNote = undefined;
+                    }
+                    this.deletingNoteId = undefined;
+                    this.cdr.markForCheck();
+                },
+                error: () => {
+                    this.errorMessage = 'Unable to delete the note right now.';
+                    this.deletingNoteId = undefined;
+                    this.cdr.markForCheck();
+                },
+            });
     }
 
     formatDate(value: string) {

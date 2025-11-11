@@ -6,9 +6,26 @@
 
     <div class="notes-grid">
         <article *ngFor="let note of notes" class="note-card" (click)="selectNote(note)">
-            <p class="note-title">{{ note.title }}</p>
-            <p class="note-access">{{ note.accessRole }}</p>
-            <p class="note-meta">Updated {{ formatDate(note.updatedAt) }}</p>
+            <div class="note-card__top">
+                <div>
+                    <p class="note-title">{{ note.title }}</p>
+                    <p class="note-meta">Updated {{ formatDate(note.updatedAt) }}</p>
+                </div>
+                <button
+                    *ngIf="note.accessRole === 'owner'"
+                    type="button"
+                    class="note-delete"
+                    (click)="deleteNote(note, $event)"
+                    [disabled]="deletingNoteId === note.id"
+                >
+                    {{ deletingNoteId === note.id ? 'Deleting…' : 'Delete' }}
+                </button>
+            </div>
+            <p class="note-preview">{{ notePreview(note) }}</p>
+            <div class="note-card__footer">
+                <span class="note-access">{{ note.accessRole === 'owner' ? 'Owner' : 'Shared' }}</span>
+                <span class="note-is-public">{{ note.isPublic ? 'Public' : 'Private' }}</span>
+            </div>
         </article>
     </div>
 
