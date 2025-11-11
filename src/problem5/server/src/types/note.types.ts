@@ -8,6 +8,11 @@ export const createNoteSchema = z.object({
 export const updateNoteSchema = z.object({
     title: z.string().min(1, "Title is required").optional(),
     content: z.any().optional(),
+    clientVersion: z.coerce
+        .number()
+        .int()
+        .min(0)
+        .optional(),
 });
 
 export const shareNoteSchema = z.object({

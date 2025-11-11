@@ -1,15 +1,21 @@
+import http from "node:http";
 import express, { NextFunction, Request, Response } from "express";
 import indexRouter from "./routes/index.route";
 import { AppDataSource } from "./libs/data-source";
 import { HttpError } from "./utils/errors";
+import { initializeSocketServer } from "./libs/socket";
+import { initializeNoteProcessing } from "./services/note.process";
 
 const app = express();
+const server = http.createServer(app);
 
 app.use(express.json());
 
 AppDataSource.initialize()
     .then(() => {
         console.log("PostgreSQL connected via TypeORM");
+        initializeSocketServer(server);
+        initializeNoteProcessing();
         app.use("/", indexRouter);
 
         app.use(
@@ -23,7 +29,7 @@ AppDataSource.initialize()
             },
         );
 
-        app.listen(3000, () => {
+        server.listen(3000, () => {
             console.log("Server is running on port 3000");
         });
     })

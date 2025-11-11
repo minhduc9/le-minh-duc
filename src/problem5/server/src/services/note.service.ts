@@ -10,6 +10,7 @@ import {
 import { ForbiddenError, NotFoundError } from "../utils/errors";
 import { NoteShare, Role } from "../models/noteShare.model";
 import { User } from "../models/user.model";
+import { enqueueNoteUpdate, getNoteUpdateQueueEvents } from "./note.process";
 
 type NoteListItem = Pick<
     Note,
@@ -79,13 +80,7 @@ export class NoteService {
         userId: string,
         params: ListNotesInput,
     ): Promise<NoteListItem[]> {
-        const {
-            limit,
-            offset,
-            includeShared,
-            includeContent,
-            search,
-        } = params;
+        const { limit, offset, includeShared, includeContent, search } = params;
 
         const qb = this.noteRepository
             .createQueryBuilder("note")
@@ -136,7 +131,7 @@ export class NoteService {
             const accessRole =
                 note.ownerId === userId
                     ? ("owner" as const)
-                    : shareRole ?? "view";
+                    : (shareRole ?? "view");
 
             const payload: NoteListItem = {
                 id: note.id,
@@ -177,9 +172,26 @@ export class NoteService {
             }
         }
 
-        Object.assign(note, data);
-        await this.noteRepository.save(note);
-        return note;
+        const { clientVersion, ...changes } = data;
+        const version = clientVersion ?? note.lastVersion;
+        const job = await enqueueNoteUpdate({
+            noteId,
+            userId,
+            changes,
+            clientVersion: version,
+        });
+
+        await job.waitUntilFinished(getNoteUpdateQueueEvents());
+
+        const updatedNote = await this.noteRepository.findOne({
+            where: { id: noteId },
+        });
+
+        if (!updatedNote) {
+            throw new NotFoundError("Note not found after update");
+        }
+
+        return updatedNote;
     }
 
     async deleteNote(noteId: string, userId: string) {
