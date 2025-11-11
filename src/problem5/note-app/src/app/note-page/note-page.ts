@@ -60,6 +60,7 @@ export class NotePage implements OnInit, OnDestroy {
     shareRoleOptions: ShareRole[] = ['view', 'edit'];
     shareUpdatingId?: string;
     shareRemovingId?: string;
+    accessDeniedMessage?: string;
 
     private readonly currentUserId?: string;
     private noteId?: string;
@@ -297,6 +298,7 @@ export class NotePage implements OnInit, OnDestroy {
             return;
         }
 
+        this.accessDeniedMessage = undefined;
         this.saving = true;
         this.saveError = undefined;
         const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
@@ -317,9 +319,14 @@ export class NotePage implements OnInit, OnDestroy {
                     this.syncNoteView(updatedNote);
                     this.cdr.markForCheck();
                 },
-                error: () => {
+                error: (error) => {
                     this.saving = false;
-                    this.saveError = 'Could not save changes. Please try again.';
+                    if (error instanceof HttpErrorResponse && error.status === 403) {
+                        this.accessDeniedMessage = 'You are not allowed to edit this note.';
+                        this.saveError = undefined;
+                    } else {
+                        this.saveError = 'Could not save changes. Please try again.';
+                    }
                     this.cdr.markForCheck();
                 },
             });

@@ -319,5 +319,4 @@ export class NoteService {
             createdAt: share.createdAt.toISOString(),
         }));
     }
-
 }

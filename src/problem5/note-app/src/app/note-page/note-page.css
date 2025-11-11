@@ -477,6 +477,12 @@
     color: #ff7a7a;
 }
 
+.status.warning {
+    background: rgba(255, 223, 186, 0.9);
+    color: rgba(11, 15, 37, 0.9);
+    border: 1px solid rgba(255, 159, 67, 0.4);
+}
+
 .empty-state {
     margin: 0;
     color: rgba(11, 15, 37, 0.55);

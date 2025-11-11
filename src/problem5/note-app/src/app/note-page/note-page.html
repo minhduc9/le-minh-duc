@@ -40,6 +40,9 @@
             </button>
         </div>
     </div>
+    <p *ngIf="accessDeniedMessage" class="status warning">
+        {{ accessDeniedMessage }}
+    </p>
 
     <div class="share-panel" *ngIf="sharePanelOpen">
         <div class="share-panel__header">
