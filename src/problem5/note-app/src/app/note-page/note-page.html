@@ -48,7 +48,7 @@
                 type="button"
                 class="share-panel__close"
                 aria-label="Close sharing"
-            (click)="closeSharePanel()"
+                (click)="closeSharePanel()"
             >
                 ×
             </button>
@@ -73,11 +73,7 @@
                     </option>
                 </select>
             </label>
-            <button
-                type="submit"
-                class="share-panel__invite"
-                [disabled]="shareSubmitting"
-            >
+            <button type="submit" class="share-panel__invite" [disabled]="shareSubmitting">
                 {{ shareSubmitting ? 'Inviting…' : 'Invite' }}
             </button>
         </form>
@@ -86,29 +82,41 @@
         <p *ngIf="shareListLoading" class="status">Loading…</p>
         <p *ngIf="shareListError" class="status error">{{ shareListError }}</p>
         <ul
-            *ngIf="
-                !shareListLoading &&
-                !shareListError &&
-                shareList &&
-                shareList.length
-            "
+            *ngIf="!shareListLoading && !shareListError && shareList && shareList.length"
             class="share-panel__list"
         >
             <li *ngFor="let share of shareList">
-                <span class="share-list__user">
+                <div class="share-list__user">
                     <strong>{{ share.name }}</strong>
                     <span class="share-list__email">{{ share.email }}</span>
-                </span>
-                <span class="share-role">{{ formatRoleLabel(share.role) }}</span>
+                </div>
+                <div class="share-list__actions">
+                    <label class="sr-only" for="edit-role-{{ share.id }}">Role</label>
+                    <select
+                        id="edit-role-{{ share.id }}"
+                        #roleSelect
+                        [value]="share.role"
+                        (change)="changeShareRole(share, roleSelect.value)"
+                        [disabled]="shareUpdatingId === share.id || shareRemovingId === share.id"
+                    >
+                        <option *ngFor="let option of shareRoleOptions" [value]="option">
+                            {{ formatRoleLabel(option) }}
+                        </option>
+                    </select>
+                    <button
+                        type="button"
+                        class="share-remove"
+                        (click)="removeShare(share)"
+                        [disabled]="shareRemovingId === share.id || shareUpdatingId === share.id"
+                        aria-label="Remove member {{ share.email }}"
+                    >
+                        x
+                    </button>
+                </div>
             </li>
         </ul>
         <p
-            *ngIf="
-                !shareListLoading &&
-                !shareListError &&
-                shareList &&
-                !shareList.length
-            "
+            *ngIf="!shareListLoading && !shareListError && shareList && !shareList.length"
             class="status subtle"
         >
             No one.
@@ -154,7 +162,10 @@
                     ></textarea>
                 </div>
                 <div class="note-editor-column">
-                    <article class="markdown-body editor-preview" [innerHTML]="editingPreview"></article>
+                    <article
+                        class="markdown-body editor-preview"
+                        [innerHTML]="editingPreview"
+                    ></article>
                 </div>
             </div>
 

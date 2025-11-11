@@ -87,6 +87,47 @@
     gap: 1rem;
 }
 
+.share-list__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.share-list__actions select {
+    min-width: 120px;
+    border-radius: 12px;
+    border: 1px solid rgba(11, 15, 37, 0.15);
+    padding: 0.45rem 0.8rem;
+    font-size: 0.95rem;
+    background: rgba(255, 255, 255, 0.95);
+    outline: none;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.share-list__actions select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(51, 153, 255, 0.15);
+}
+
+.share-remove {
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 77, 79, 0.1);
+    color: #ff4d4f;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-remove:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .share-list__user {
     display: flex;
     flex-direction: column;
@@ -97,15 +138,6 @@
 .share-list__email {
     font-size: 0.85rem;
     color: rgba(11, 15, 37, 0.6);
-}
-
-.share-role {
-    border-radius: 999px;
-    padding: 0.25rem 0.9rem;
-    font-size: 0.85rem;
-    background: rgba(11, 15, 37, 0.1);
-    color: #0b0f25;
-    font-weight: 600;
 }
 
 .status.subtle {

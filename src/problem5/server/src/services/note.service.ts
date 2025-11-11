@@ -7,8 +7,13 @@ import {
     UpdateNoteInput,
     ListNotesInput,
     NoteShareListItem,
+    ShareUpdateInput,
 } from "../types/note.types";
-import { ForbiddenError, NotFoundError } from "../utils/errors";
+import {
+    BadRequestError,
+    ForbiddenError,
+    NotFoundError,
+} from "../utils/errors";
 import { NoteShare, Role } from "../models/noteShare.model";
 import { User } from "../models/user.model";
 import { enqueueNoteUpdate, getNoteUpdateQueueEvents } from "./note.process";
@@ -246,6 +251,52 @@ export class NoteService {
         return noteShare;
     }
 
+    async modifyNoteShare(
+        noteId: string,
+        ownerId: string,
+        userEmail: string,
+        data: ShareUpdateInput,
+    ) {
+        const note = await this.noteRepository.findOne({
+            where: { id: noteId, ownerId },
+        });
+
+        if (!note) {
+            throw new NotFoundError("Note not found or you are not the owner");
+        }
+
+        const normalizedEmail = userEmail.trim().toLowerCase();
+        const userToShareWith = await this.userRepository
+            .createQueryBuilder("user")
+            .where("LOWER(user.email) = :email", { email: normalizedEmail })
+            .getOne();
+
+        if (!userToShareWith) {
+            throw new NotFoundError("User to share with not found");
+        }
+
+        const share = await this.noteShareRepository.findOne({
+            where: { noteId, userId: userToShareWith.id },
+        });
+
+        if (!share) {
+            throw new NotFoundError("Note is not shared with this user");
+        }
+
+        if (data.remove) {
+            await this.noteShareRepository.remove(share);
+            return { message: "Member removed successfully" };
+        }
+
+        if (!data.role) {
+            throw new BadRequestError("Role is required when updating a share");
+        }
+
+        share.role = data.role;
+        await this.noteShareRepository.save(share);
+        return share;
+    }
+
     async listNoteShares(noteId: string, ownerId: string) {
         const note = await this.noteRepository.findOne({
             where: { id: noteId, ownerId },
@@ -269,36 +320,4 @@ export class NoteService {
         }));
     }
 
-    async unshareNote(
-        noteId: string,
-        ownerId: string,
-        userEmailToUnshare: string,
-    ) {
-        const note = await this.noteRepository.findOne({
-            where: { id: noteId, ownerId },
-        });
-
-        if (!note) {
-            throw new NotFoundError("Note not found or you are not the owner");
-        }
-
-        const userToUnshare = await this.userRepository.findOne({
-            where: { email: userEmailToUnshare },
-        });
-
-        if (!userToUnshare) {
-            throw new NotFoundError("User to unshare with not found");
-        }
-
-        const share = await this.noteShareRepository.findOne({
-            where: { noteId, userId: userToUnshare.id },
-        });
-
-        if (!share) {
-            throw new NotFoundError("Note is not shared with this user");
-        }
-
-        await this.noteShareRepository.remove(share);
-        return { message: "Note unshared successfully" };
-    }
 }

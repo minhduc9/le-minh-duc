@@ -2,9 +2,10 @@ import { NextFunction, Response } from "express";
 import { NoteService } from "../services/note.service";
 import {
     createNoteSchema,
-    updateNoteSchema,
-    shareNoteSchema,
     listNotesSchema,
+    shareNoteSchema,
+    shareUpdateSchema,
+    updateNoteSchema,
 } from "../types/note.types";
 import { AuthenticatedRequest } from "../types/express";
 
@@ -133,7 +134,7 @@ export class NoteController {
         }
     };
 
-    unshareNote = async (
+    modifyShare = async (
         req: AuthenticatedRequest,
         res: Response,
         next: NextFunction,
@@ -141,10 +142,12 @@ export class NoteController {
         try {
             const { id, email } = req.params;
             const ownerId = req.userId!;
-            const result = await this.noteService.unshareNote(
+            const payload = shareUpdateSchema.parse(req.body);
+            const result = await this.noteService.modifyNoteShare(
                 id,
                 ownerId,
                 email,
+                payload,
             );
             res.status(200).json(result);
         } catch (error) {

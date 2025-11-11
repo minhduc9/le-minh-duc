@@ -1,11 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-    HttpClient,
-    HttpClientModule,
-    HttpErrorResponse,
-    HttpHeaders,
-} from '@angular/common/http';
+import { HttpClient, HttpClientModule, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
@@ -63,6 +58,8 @@ export class NotePage implements OnInit, OnDestroy {
     shareMessage?: string;
     shareError?: string;
     shareRoleOptions: ShareRole[] = ['view', 'edit'];
+    shareUpdatingId?: string;
+    shareRemovingId?: string;
 
     private readonly currentUserId?: string;
     private noteId?: string;
@@ -76,7 +73,7 @@ export class NotePage implements OnInit, OnDestroy {
         private readonly router: Router,
         private readonly sanitizer: DomSanitizer,
         private readonly realtime: NoteRealtimeService,
-        private readonly cdr: ChangeDetectorRef,
+        private readonly cdr: ChangeDetectorRef
     ) {
         this.currentUserId = this.extractUserId();
     }
@@ -132,6 +129,84 @@ export class NotePage implements OnInit, OnDestroy {
         this.cdr.markForCheck();
     }
 
+    changeShareRole(share: NoteShareInfo, newRole: string) {
+        if (this.shareUpdatingId || this.shareRemovingId) {
+            return;
+        }
+
+        const normalizedRole = newRole as ShareRole;
+        if (!this.shareRoleOptions.includes(normalizedRole)) {
+            return;
+        }
+
+        if (share.role === normalizedRole) {
+            return;
+        }
+
+        this.shareUpdatingId = share.id;
+        this.shareError = undefined;
+        this.shareMessage = undefined;
+        this.modifyShare(share, { role: normalizedRole }, 'Role updated.');
+    }
+
+    removeShare(share: NoteShareInfo) {
+        if (this.shareRemovingId) {
+            return;
+        }
+
+        this.shareRemovingId = share.id;
+        this.shareError = undefined;
+        this.shareMessage = undefined;
+        this.modifyShare(share, { remove: true }, 'Member removed.');
+    }
+
+    private modifyShare(
+        share: NoteShareInfo,
+        payload: { role?: ShareRole; remove?: boolean },
+        successMessage: string
+    ) {
+        if (!this.noteId) {
+            return;
+        }
+
+        if (!this.token) {
+            this.shareError = 'Session expired. Please log in again.';
+            this.shareMessage = undefined;
+            this.shareUpdatingId = undefined;
+            this.shareRemovingId = undefined;
+            this.cdr.markForCheck();
+            return;
+        }
+
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
+        const url = `http://localhost:3000/notes/${this.noteId}/share/${encodeURIComponent(
+            share.email
+        )}`;
+
+        this.http
+            .put<NoteShareInfo | { message?: string }>(url, payload, {
+                headers,
+            })
+            .subscribe({
+                next: () => {
+                    this.shareUpdatingId = undefined;
+                    this.shareRemovingId = undefined;
+                    this.shareMessage = successMessage;
+                    this.loadShareList();
+                    this.cdr.markForCheck();
+                },
+                error: (error) => {
+                    this.shareUpdatingId = undefined;
+                    this.shareRemovingId = undefined;
+                    const fallback = payload.remove
+                        ? 'Unable to remove member.'
+                        : 'Unable to update role.';
+                    this.shareError = this.parseErrorMessage(error, fallback);
+                    this.cdr.markForCheck();
+                },
+            });
+    }
+
     shareWithUser() {
         if (!this.noteId) {
             return;
@@ -157,10 +232,7 @@ export class NotePage implements OnInit, OnDestroy {
         this.shareSubmitting = true;
         this.shareError = undefined;
         this.shareMessage = undefined;
-        const headers = new HttpHeaders().set(
-            'Authorization',
-            `Bearer ${this.token}`,
-        );
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
         const payload = { email: normalizedEmail, role: this.shareRole };
 
         this.http
@@ -180,7 +252,7 @@ export class NotePage implements OnInit, OnDestroy {
                     this.shareSubmitting = false;
                     this.shareError = this.parseErrorMessage(
                         error,
-                        'Unable to share at the moment.',
+                        'Unable to share at the moment.'
                     );
                     this.cdr.markForCheck();
                 },
@@ -342,21 +414,19 @@ export class NotePage implements OnInit, OnDestroy {
         this.loading = true;
         const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
 
-        this.http
-            .get<NoteDetail>(`http://localhost:3000/notes/${noteId}`, { headers })
-            .subscribe({
-                next: (note) => {
-                    this.syncNoteView(note);
-                    this.loading = false;
-                    this.errorMessage = undefined;
-                    this.cdr.markForCheck();
-                },
-                error: () => {
-                    this.errorMessage = 'Unable to load the note right now.';
-                    this.loading = false;
-                    this.cdr.markForCheck();
-                },
-            });
+        this.http.get<NoteDetail>(`http://localhost:3000/notes/${noteId}`, { headers }).subscribe({
+            next: (note) => {
+                this.syncNoteView(note);
+                this.loading = false;
+                this.errorMessage = undefined;
+                this.cdr.markForCheck();
+            },
+            error: () => {
+                this.errorMessage = 'Unable to load the note right now.';
+                this.loading = false;
+                this.cdr.markForCheck();
+            },
+        });
     }
 
     private loadShareList() {
@@ -391,7 +461,7 @@ export class NotePage implements OnInit, OnDestroy {
                     this.shareListLoading = false;
                     this.shareListError = this.parseErrorMessage(
                         error,
-                        'Unable to load the sharing list right now.',
+                        'Unable to load the sharing list right now.'
                     );
                     this.cdr.markForCheck();
                 },
@@ -413,13 +483,13 @@ export class NotePage implements OnInit, OnDestroy {
 
     private updateRenderedContent(markdown: string) {
         this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(
-            this.convertMarkdown(markdown),
+            this.convertMarkdown(markdown)
         );
     }
 
     updateEditingPreview(markdown: string) {
         this.editingPreview = this.sanitizer.bypassSecurityTrustHtml(
-            this.convertMarkdown(markdown ?? ''),
+            this.convertMarkdown(markdown ?? '')
         );
     }
 
@@ -481,9 +551,7 @@ export class NotePage implements OnInit, OnDestroy {
 
         const flushCodeBlock = () => {
             if (inCodeBlock) {
-                htmlParts.push(
-                    `<pre><code>${this.escapeHtml(codeLines.join('\n'))}</code></pre>`,
-                );
+                htmlParts.push(`<pre><code>${this.escapeHtml(codeLines.join('\n'))}</code></pre>`);
                 codeLines.length = 0;
                 inCodeBlock = false;
             }
@@ -516,17 +584,13 @@ export class NotePage implements OnInit, OnDestroy {
             if (headingMatch) {
                 closeList();
                 const level = headingMatch[1].length;
-                htmlParts.push(
-                    `<h${level}>${this.formatInline(headingMatch[2])}</h${level}>`,
-                );
+                htmlParts.push(`<h${level}>${this.formatInline(headingMatch[2])}</h${level}>`);
                 continue;
             }
 
             if (trimmed.startsWith('> ')) {
                 closeList();
-                htmlParts.push(
-                    `<blockquote>${this.formatInline(trimmed.slice(2))}</blockquote>`,
-                );
+                htmlParts.push(`<blockquote>${this.formatInline(trimmed.slice(2))}</blockquote>`);
                 continue;
             }
 
@@ -535,9 +599,7 @@ export class NotePage implements OnInit, OnDestroy {
                     htmlParts.push('<ul>');
                     inList = true;
                 }
-                htmlParts.push(
-                    `<li>${this.formatInline(trimmed.replace(/^[-*+]\s+/, ''))}</li>`,
-                );
+                htmlParts.push(`<li>${this.formatInline(trimmed.replace(/^[-*+]\s+/, ''))}</li>`);
                 continue;
             }
 
@@ -564,7 +626,7 @@ export class NotePage implements OnInit, OnDestroy {
         result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
         result = result.replace(
             /\[([^\]]+)\]\(([^)]+)\)/g,
-            '<a target="_blank" rel="noopener noreferrer" href="$2">$1</a>',
+            '<a target="_blank" rel="noopener noreferrer" href="$2">$1</a>'
         );
         return result;
     }

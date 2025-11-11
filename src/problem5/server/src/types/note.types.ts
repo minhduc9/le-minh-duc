@@ -22,6 +22,18 @@ export const shareNoteSchema = z.object({
     role: z.enum(shareRoleOptions),
 });
 
+export const shareUpdateSchema = z
+    .object({
+        role: z.enum(shareRoleOptions).optional(),
+        remove: z.boolean().optional(),
+    })
+    .refine(
+        (value) => Boolean(value.remove || value.role),
+        {
+            message: "Role or remove flag is required",
+        },
+    );
+
 export type ShareRole = (typeof shareRoleOptions)[number];
 
 export const listNotesSchema = z.object({
@@ -40,6 +52,7 @@ export const listNotesSchema = z.object({
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 export type ShareNoteInput = z.infer<typeof shareNoteSchema>;
+export type ShareUpdateInput = z.infer<typeof shareUpdateSchema>;
 export type ListNotesInput = z.infer<typeof listNotesSchema>;
 export type NoteShareListItem = {
     id: string;

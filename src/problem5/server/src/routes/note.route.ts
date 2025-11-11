@@ -12,6 +12,6 @@ router.put("/:id", authenticate, noteController.updateNote);
 router.delete("/:id", authenticate, noteController.deleteNote);
 router.get("/:id/share", authenticate, noteController.listShares);
 router.post("/:id/share", authenticate, noteController.shareNote);
-router.delete("/:id/share/:email", authenticate, noteController.unshareNote);
+router.put("/:id/share/:email", authenticate, noteController.modifyShare);
 
 export default router;
