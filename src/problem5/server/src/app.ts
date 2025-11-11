@@ -20,7 +20,7 @@ AppDataSource.initialize()
                         .json({ message: err.message });
                 }
                 res.status(500).json({ message: "Something went wrong" });
-            }
+            },
         );
 
         app.listen(3000, () => {
