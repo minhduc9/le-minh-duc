@@ -1,0 +1,45 @@
+<div class="form-shell">
+    <p class="form-caption">New here</p>
+    <h3>Create your workspace</h3>
+    <form (ngSubmit)="signup()" class="auth-form">
+        <label class="field" for="signup-name">
+            <span>Full name</span>
+            <input
+                type="text"
+                id="signup-name"
+                name="name"
+                [(ngModel)]="name"
+                required
+                autocomplete="name"
+                placeholder="Jordan Lee"
+            />
+        </label>
+        <label class="field" for="signup-email">
+            <span>Email address</span>
+            <input
+                type="email"
+                id="signup-email"
+                name="email"
+                [(ngModel)]="email"
+                required
+                autocomplete="email"
+                placeholder="you@example.com"
+            />
+        </label>
+        <label class="field" for="signup-password">
+            <span>Create password</span>
+            <input
+                type="password"
+                id="signup-password"
+                name="password"
+                [(ngModel)]="password"
+                required
+                minlength="6"
+                autocomplete="new-password"
+                placeholder="••••••••"
+            />
+        </label>
+        <button type="submit" class="primary-btn">Create account</button>
+    </form>
+    <p class="form-foot">Already have an account? <a routerLink="/login">Login instead</a></p>
+</div>

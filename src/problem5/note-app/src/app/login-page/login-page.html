@@ -1,0 +1,32 @@
+<div class="form-shell">
+    <p class="form-caption">Trusted access</p>
+    <h3>Welcome back</h3>
+    <form (ngSubmit)="login()" class="auth-form">
+        <label class="field" for="login-email">
+            <span>Email address</span>
+            <input
+                type="email"
+                id="login-email"
+                name="email"
+                [(ngModel)]="email"
+                required
+                autocomplete="username"
+                placeholder="you@example.com"
+            />
+        </label>
+        <label class="field" for="login-password">
+            <span>Password</span>
+            <input
+                type="password"
+                id="login-password"
+                name="password"
+                [(ngModel)]="password"
+                required
+                autocomplete="current-password"
+                placeholder="••••••••"
+            />
+        </label>
+        <button type="submit" class="primary-btn">Continue</button>
+    </form>
+    <p class="form-foot">Don't have an account? <a routerLink="/signup">Create one</a></p>
+</div>

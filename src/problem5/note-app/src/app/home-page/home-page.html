@@ -1,0 +1,29 @@
+<section class="home-shell" aria-live="polite">
+  <header class="home-hero">
+    <p class="eyebrow">Live workspace</p>
+    <h2>Everything you capture stays ready for action</h2>
+    <p class="home-lede">
+      Notes sync instantly, stay encrypted, and let you surface insights before the idea fades.
+      Breeze through moments with a calm, adaptable layout that keeps the focus on the work.
+    </p>
+    <div class="hero-actions">
+      <button type="button" class="primary">New quick note</button>
+      <button type="button" class="ghost">View shared spaces</button>
+    </div>
+  </header>
+
+  <div class="insight-grid">
+    <article *ngFor="let insight of insights">
+      <p class="label">{{ insight.label }}</p>
+      <p class="value">{{ insight.value }}</p>
+      <p class="detail">{{ insight.detail }}</p>
+    </article>
+  </div>
+
+  <div class="highlight-grid">
+    <article *ngFor="let highlight of highlights">
+      <h3>{{ highlight.title }}</h3>
+      <p>{{ highlight.copy }}</p>
+    </article>
+  </div>
+</section>
