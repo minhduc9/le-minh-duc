@@ -2,8 +2,25 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
+import { Subject } from 'rxjs';
 
 import { NotePage } from './note-page';
+import {
+    NoteRealtimeService,
+    NoteRealtimeUpdate,
+} from '../services/note-realtime.service';
+
+class NoteRealtimeServiceStub {
+    private readonly updatesSubject = new Subject<NoteRealtimeUpdate>();
+
+    join() {}
+    leave() {}
+    disconnect() {}
+
+    onNoteUpdated() {
+        return this.updatesSubject.asObservable();
+    }
+}
 
 describe('NotePage', () => {
     let component: NotePage;
@@ -28,6 +45,10 @@ describe('NotePage', () => {
                         },
                     },
                 },
+                {
+                    provide: NoteRealtimeService,
+                    useClass: NoteRealtimeServiceStub,
+                },
             ],
         }).compileComponents();
 
@@ -39,6 +60,7 @@ describe('NotePage', () => {
 
     afterEach(() => {
         httpTestingController.verify();
+        localStorage.clear();
     });
 
     it('should create', () => {

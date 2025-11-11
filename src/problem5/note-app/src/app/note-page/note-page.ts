@@ -1,8 +1,11 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { NoteRealtimeService, NoteRealtimeUpdate } from '../services/note-realtime.service';
 
 interface NoteDetail {
     id: string;
@@ -18,37 +21,134 @@ interface NoteDetail {
 @Component({
     selector: 'app-note-page',
     standalone: true,
-    imports: [CommonModule, HttpClientModule],
+    imports: [CommonModule, HttpClientModule, FormsModule],
     templateUrl: './note-page.html',
     styleUrls: ['./note-page.css'],
 })
-export class NotePage implements OnInit {
+export class NotePage implements OnInit, OnDestroy {
     note?: NoteDetail;
     loading = false;
     errorMessage?: string;
     renderedContent?: SafeHtml;
+    editing = false;
+    titleInput = '';
+    contentInput = '';
+    editingPreview?: SafeHtml;
+    saving = false;
+    saveError?: string;
+    collaborationMessage?: string;
+
+    private readonly currentUserId?: string;
+    private noteId?: string;
+    private updatesSub?: Subscription;
+    private collaborationTimer?: ReturnType<typeof setTimeout>;
 
     constructor(
         private readonly http: HttpClient,
         private readonly route: ActivatedRoute,
         private readonly router: Router,
         private readonly sanitizer: DomSanitizer,
+        private readonly realtime: NoteRealtimeService,
         private readonly cdr: ChangeDetectorRef,
-    ) {}
+    ) {
+        this.currentUserId = this.extractUserId();
+    }
 
     ngOnInit() {
-        const noteId = this.route.snapshot.paramMap.get('id');
-        if (!noteId) {
+        this.noteId = this.route.snapshot.paramMap.get('id') ?? undefined;
+        if (!this.noteId) {
             this.errorMessage = 'Note not found.';
             this.cdr.markForCheck();
             return;
         }
 
-        this.loadNote(noteId);
+        this.realtime.join(this.noteId);
+        this.updatesSub = this.realtime
+            .onNoteUpdated()
+            .subscribe((event) => this.handleRealtimeUpdate(event));
+
+        this.loadNote(this.noteId);
+    }
+
+    ngOnDestroy() {
+        if (this.noteId) {
+            this.realtime.leave(this.noteId);
+        }
+        this.realtime.disconnect();
+        this.updatesSub?.unsubscribe();
+        if (this.collaborationTimer) {
+            clearTimeout(this.collaborationTimer);
+        }
     }
 
     goBack() {
         this.router.navigate(['/home']);
+    }
+
+    startEditing() {
+        if (!this.note) {
+            return;
+        }
+        this.editing = true;
+        this.saveError = undefined;
+        this.titleInput = this.note.title;
+        this.contentInput = this.getMarkdownSource(this.note.content);
+        this.updateEditingPreview(this.contentInput);
+        this.cdr.markForCheck();
+    }
+
+    cancelEditing() {
+        this.editing = false;
+        this.saveError = undefined;
+        if (this.note) {
+            this.syncNoteView(this.note);
+        }
+        this.cdr.markForCheck();
+    }
+
+    saveChanges() {
+        if (!this.note) {
+            return;
+        }
+
+        if (!this.titleInput.trim()) {
+            this.saveError = 'Title is required.';
+            this.cdr.markForCheck();
+            return;
+        }
+
+        if (!this.token) {
+            this.errorMessage = 'Session expired. Please log in again.';
+            this.cdr.markForCheck();
+            return;
+        }
+
+        this.saving = true;
+        this.saveError = undefined;
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
+        const payload = {
+            title: this.titleInput.trim(),
+            content: this.contentInput ?? '',
+            clientVersion: this.note.lastVersion,
+        };
+
+        this.http
+            .put<NoteDetail>(`http://localhost:3000/notes/${this.note.id}`, payload, {
+                headers,
+            })
+            .subscribe({
+                next: (updatedNote) => {
+                    this.saving = false;
+                    this.editing = false;
+                    this.syncNoteView(updatedNote);
+                    this.cdr.markForCheck();
+                },
+                error: () => {
+                    this.saving = false;
+                    this.saveError = 'Could not save changes. Please try again.';
+                    this.cdr.markForCheck();
+                },
+            });
     }
 
     formatDate(value: string) {
@@ -65,6 +165,58 @@ export class NotePage implements OnInit {
         return localStorage.getItem('token') ?? '';
     }
 
+    private extractUserId() {
+        const token = this.token;
+        if (!token) {
+            return undefined;
+        }
+
+        try {
+            const [, payload = ''] = token.split('.');
+            const decoded = this.decodeBase64Url(payload);
+            const parsed = JSON.parse(decoded) as { sub?: string };
+            return parsed.sub;
+        } catch {
+            return undefined;
+        }
+    }
+
+    private decodeBase64Url(segment: string) {
+        const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
+        const padLength = (4 - (normalized.length % 4 || 4)) % 4;
+        return atob(normalized.padEnd(normalized.length + padLength, '='));
+    }
+
+    private handleRealtimeUpdate(event: NoteRealtimeUpdate) {
+        if (!this.note || event.noteId !== this.note.id) {
+            return;
+        }
+
+        const updated: NoteDetail = {
+            ...this.note,
+            title: event.state?.title ?? event.patch?.title ?? this.note.title,
+            content: event.state?.content ?? event.patch?.content ?? this.note.content,
+            updatedAt: event.updatedAt ?? this.note.updatedAt,
+            lastVersion: event.lastVersion ?? this.note.lastVersion,
+        };
+
+        const preserveInputs = this.editing;
+        this.syncNoteView(updated, { preserveInputs });
+
+        if (event.actorId !== this.currentUserId) {
+            this.collaborationMessage = 'Updated by a collaborator just now.';
+            if (this.collaborationTimer) {
+                clearTimeout(this.collaborationTimer);
+            }
+            this.collaborationTimer = setTimeout(() => {
+                this.collaborationMessage = undefined;
+                this.cdr.markForCheck();
+            }, 4000);
+        }
+
+        this.cdr.markForCheck();
+    }
+
     private loadNote(noteId: string) {
         if (!this.token) {
             this.errorMessage = 'Session expired. Please log in again.';
@@ -79,11 +231,7 @@ export class NotePage implements OnInit {
             .get<NoteDetail>(`http://localhost:3000/notes/${noteId}`, { headers })
             .subscribe({
                 next: (note) => {
-                    this.note = note;
-                    const markdownSource = this.getMarkdownSource(note.content);
-                    this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(
-                        this.convertMarkdown(markdownSource),
-                    );
+                    this.syncNoteView(note);
                     this.loading = false;
                     this.errorMessage = undefined;
                     this.cdr.markForCheck();
@@ -94,6 +242,31 @@ export class NotePage implements OnInit {
                     this.cdr.markForCheck();
                 },
             });
+    }
+
+    private syncNoteView(note: NoteDetail, options?: { preserveInputs?: boolean }) {
+        this.note = note;
+        const markdownSource = this.getMarkdownSource(note.content);
+
+        if (!options?.preserveInputs || !this.editing) {
+            this.titleInput = note.title;
+            this.contentInput = markdownSource;
+            this.updateEditingPreview(this.contentInput);
+        }
+
+        this.updateRenderedContent(markdownSource);
+    }
+
+    private updateRenderedContent(markdown: string) {
+        this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(
+            this.convertMarkdown(markdown),
+        );
+    }
+
+    updateEditingPreview(markdown: string) {
+        this.editingPreview = this.sanitizer.bypassSecurityTrustHtml(
+            this.convertMarkdown(markdown ?? ''),
+        );
     }
 
     private getMarkdownSource(content?: unknown): string {

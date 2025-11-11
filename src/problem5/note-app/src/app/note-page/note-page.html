@@ -1,19 +1,85 @@
 <section class="note-page">
     <div class="note-actions" aria-live="polite">
         <button type="button" class="back-button" (click)="goBack()">← Back</button>
-        <button type="button" class="edit-button" disabled>Edit</button>
+        <div class="note-actions__group">
+            <button
+                *ngIf="!editing"
+                type="button"
+                class="edit-button"
+                (click)="startEditing()"
+                [disabled]="!note"
+            >
+                Edit
+            </button>
+            <ng-container *ngIf="editing">
+                <button
+                    type="button"
+                    class="save-button"
+                    (click)="saveChanges()"
+                    [disabled]="saving"
+                >
+                    {{ saving ? 'Saving…' : 'Save' }}
+                </button>
+                <button
+                    type="button"
+                    class="cancel-button"
+                    (click)="cancelEditing()"
+                    [disabled]="saving"
+                >
+                    Cancel
+                </button>
+            </ng-container>
+        </div>
     </div>
 
-    <div class="note-view" *ngIf="!loading && note; else placeholder">
-        <header class="note-header">
-            <h1>{{ note.title }}</h1>
-            <div class="note-meta">
-                <span>Owner</span>
-                <span>Updated {{ formatDate(note.updatedAt) }}</span>
-            </div>
-        </header>
+    <p *ngIf="collaborationMessage" class="collaboration-toast" aria-live="polite">
+        {{ collaborationMessage }}
+    </p>
 
-        <article class="markdown-body" [innerHTML]="renderedContent"></article>
+    <div class="note-shell" *ngIf="!loading && note; else placeholder">
+        <div class="note-view">
+            <header class="note-header">
+                <ng-container *ngIf="!editing; else titleEditor">
+                    <h1>{{ note.title }}</h1>
+                </ng-container>
+                <ng-template #titleEditor>
+                    <input
+                        class="note-title-input"
+                        type="text"
+                        name="title"
+                        maxlength="200"
+                        placeholder="Note title"
+                        [(ngModel)]="titleInput"
+                    />
+                </ng-template>
+                <div class="note-meta">
+                    <span>Owner</span>
+                    <span>Updated {{ formatDate(note.updatedAt) }}</span>
+                </div>
+            </header>
+
+            <div *ngIf="editing; else readOnlyContent" class="note-editor">
+                <div class="note-editor-column">
+                    <label class="sr-only" for="note-content">Note content</label>
+                    <textarea
+                        id="note-content"
+                        name="content"
+                        rows="16"
+                        placeholder="Write using Markdown…"
+                        [(ngModel)]="contentInput"
+                        (ngModelChange)="updateEditingPreview($event)"
+                    ></textarea>
+                </div>
+                <div class="note-editor-column">
+                    <article class="markdown-body editor-preview" [innerHTML]="editingPreview"></article>
+                </div>
+            </div>
+
+            <ng-template #readOnlyContent>
+                <article class="markdown-body" [innerHTML]="renderedContent"></article>
+            </ng-template>
+            <p *ngIf="saveError" class="status error">{{ saveError }}</p>
+        </div>
     </div>
 
     <ng-template #placeholder>
