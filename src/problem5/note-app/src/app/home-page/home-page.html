@@ -7,7 +7,6 @@
     <div class="notes-grid">
         <article *ngFor="let note of notes" class="note-card" (click)="selectNote(note)">
             <p class="note-title">{{ note.title }}</p>
-        <p class="note-owner">Owner</p>
             <p class="note-access">{{ note.accessRole }}</p>
             <p class="note-meta">Updated {{ formatDate(note.updatedAt) }}</p>
         </article>
