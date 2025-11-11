@@ -118,6 +118,21 @@ export class NoteController {
         }
     };
 
+    listShares = async (
+        req: AuthenticatedRequest,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        try {
+            const { id } = req.params;
+            const ownerId = req.userId!;
+            const shares = await this.noteService.listNoteShares(id, ownerId);
+            res.status(200).json(shares);
+        } catch (error) {
+            next(error);
+        }
+    };
+
     unshareNote = async (
         req: AuthenticatedRequest,
         res: Response,

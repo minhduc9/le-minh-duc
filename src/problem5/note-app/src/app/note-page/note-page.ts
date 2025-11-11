@@ -1,11 +1,27 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
+import {
+    HttpClient,
+    HttpClientModule,
+    HttpErrorResponse,
+    HttpHeaders,
+} from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { NoteRealtimeService, NoteRealtimeUpdate } from '../services/note-realtime.service';
+
+type ShareRole = 'view' | 'edit';
+type AccessRole = ShareRole | 'owner';
+
+interface NoteShareInfo {
+    id: string;
+    email: string;
+    name: string;
+    role: ShareRole;
+    createdAt: string;
+}
 
 interface NoteDetail {
     id: string;
@@ -14,7 +30,7 @@ interface NoteDetail {
     updatedAt: string;
     lastVersion: number;
     isPublic: boolean;
-    accessRole: string;
+    accessRole: AccessRole;
     content?: unknown;
 }
 
@@ -37,11 +53,22 @@ export class NotePage implements OnInit, OnDestroy {
     saving = false;
     saveError?: string;
     collaborationMessage?: string;
+    sharePanelOpen = false;
+    shareListLoading = false;
+    shareListError?: string;
+    shareList?: NoteShareInfo[];
+    shareEmail = '';
+    shareRole: ShareRole = 'view';
+    shareSubmitting = false;
+    shareMessage?: string;
+    shareError?: string;
+    shareRoleOptions: ShareRole[] = ['view', 'edit'];
 
     private readonly currentUserId?: string;
     private noteId?: string;
     private updatesSub?: Subscription;
     private collaborationTimer?: ReturnType<typeof setTimeout>;
+    private shareListSub?: Subscription;
 
     constructor(
         private readonly http: HttpClient,
@@ -76,6 +103,7 @@ export class NotePage implements OnInit, OnDestroy {
         }
         this.realtime.disconnect();
         this.updatesSub?.unsubscribe();
+        this.shareListSub?.unsubscribe();
         if (this.collaborationTimer) {
             clearTimeout(this.collaborationTimer);
         }
@@ -83,6 +111,80 @@ export class NotePage implements OnInit, OnDestroy {
 
     goBack() {
         this.router.navigate(['/home']);
+    }
+
+    toggleSharePanel() {
+        if (!this.note || this.note.accessRole !== 'owner') {
+            return;
+        }
+
+        this.sharePanelOpen = !this.sharePanelOpen;
+        if (this.sharePanelOpen) {
+            this.loadShareList();
+            this.shareMessage = undefined;
+            this.shareError = undefined;
+        }
+        this.cdr.markForCheck();
+    }
+
+    closeSharePanel() {
+        this.sharePanelOpen = false;
+        this.cdr.markForCheck();
+    }
+
+    shareWithUser() {
+        if (!this.noteId) {
+            return;
+        }
+
+        const email = this.shareEmail.trim();
+        if (!email) {
+            this.shareError = 'Email is required to share a note.';
+            this.shareMessage = undefined;
+            this.cdr.markForCheck();
+            return;
+        }
+
+        const normalizedEmail = email.toLowerCase();
+
+        if (!this.token) {
+            this.shareError = 'Session expired. Please log in again.';
+            this.shareMessage = undefined;
+            this.cdr.markForCheck();
+            return;
+        }
+
+        this.shareSubmitting = true;
+        this.shareError = undefined;
+        this.shareMessage = undefined;
+        const headers = new HttpHeaders().set(
+            'Authorization',
+            `Bearer ${this.token}`,
+        );
+        const payload = { email: normalizedEmail, role: this.shareRole };
+
+        this.http
+            .post<NoteShareInfo>(`http://localhost:3000/notes/${this.noteId}/share`, payload, {
+                headers,
+            })
+            .subscribe({
+                next: () => {
+                    this.shareSubmitting = false;
+                    this.shareEmail = '';
+                    this.shareRole = 'view';
+                    this.shareMessage = 'Share invitation sent.';
+                    this.loadShareList();
+                    this.cdr.markForCheck();
+                },
+                error: (error) => {
+                    this.shareSubmitting = false;
+                    this.shareError = this.parseErrorMessage(
+                        error,
+                        'Unable to share at the moment.',
+                    );
+                    this.cdr.markForCheck();
+                },
+            });
     }
 
     startEditing() {
@@ -159,6 +261,19 @@ export class NotePage implements OnInit, OnDestroy {
             hour: 'numeric',
             minute: 'numeric',
         }).format(date);
+    }
+
+    formatRoleLabel(role: AccessRole) {
+        switch (role) {
+            case 'owner':
+                return 'Owner';
+            case 'view':
+                return 'Viewer';
+            case 'edit':
+                return 'Editor';
+            default:
+                return role;
+        }
     }
 
     private get token() {
@@ -244,6 +359,45 @@ export class NotePage implements OnInit, OnDestroy {
             });
     }
 
+    private loadShareList() {
+        if (!this.noteId) {
+            return;
+        }
+
+        if (!this.token) {
+            this.shareListError = 'Session expired. Please log in again.';
+            this.shareListLoading = false;
+            this.cdr.markForCheck();
+            return;
+        }
+
+        this.shareListSub?.unsubscribe();
+        this.shareListLoading = true;
+        this.shareListError = undefined;
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
+
+        this.shareListSub = this.http
+            .get<NoteShareInfo[]>(`http://localhost:3000/notes/${this.noteId}/share`, {
+                headers,
+            })
+            .subscribe({
+                next: (shares) => {
+                    this.shareList = shares;
+                    this.shareListLoading = false;
+                    this.cdr.markForCheck();
+                },
+                error: (error) => {
+                    this.shareList = undefined;
+                    this.shareListLoading = false;
+                    this.shareListError = this.parseErrorMessage(
+                        error,
+                        'Unable to load the sharing list right now.',
+                    );
+                    this.cdr.markForCheck();
+                },
+            });
+    }
+
     private syncNoteView(note: NoteDetail, options?: { preserveInputs?: boolean }) {
         this.note = note;
         const markdownSource = this.getMarkdownSource(note.content);
@@ -294,6 +448,16 @@ export class NotePage implements OnInit, OnDestroy {
         }
 
         return String(content);
+    }
+
+    private parseErrorMessage(error: unknown, fallback: string) {
+        if (error instanceof HttpErrorResponse) {
+            const message = error.error?.message;
+            if (typeof message === 'string') {
+                return message;
+            }
+        }
+        return fallback;
     }
 
     private convertMarkdown(text: string): string {

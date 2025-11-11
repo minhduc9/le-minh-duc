@@ -19,8 +19,9 @@ export class UserService {
     }
 
     async signup(data: SignupInput) {
+        const normalizedEmail = data.email.trim().toLowerCase();
         const existingUser = await this.userRepository.findOne({
-            where: { email: data.email },
+            where: { email: normalizedEmail },
         });
 
         if (existingUser) {
@@ -31,7 +32,7 @@ export class UserService {
 
         const user = this.userRepository.create({
             ...data,
-
+            email: normalizedEmail,
             password: hashedPassword,
         });
 
@@ -41,10 +42,12 @@ export class UserService {
     }
 
     async login(data: LoginInput) {
+        const normalizedEmail = data.email.trim().toLowerCase();
+
         const user = await this.userRepository
             .createQueryBuilder("user")
             .addSelect("user.password")
-            .where("user.email = :email", { email: data.email })
+            .where("LOWER(user.email) = :email", { email: normalizedEmail })
             .getOne();
 
         if (!user) {
@@ -97,7 +100,7 @@ export class UserService {
         }
 
         if (data.email) {
-            user.email = data.email;
+            user.email = data.email.trim().toLowerCase();
         }
 
         if (data.newPassword) {

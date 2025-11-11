@@ -10,7 +10,7 @@ import {
 import { Note } from "./note.model";
 import { User } from "./user.model";
 
-export type Role = "view" | "comment" | "edit"; // enum alternative
+export type Role = "view" | "edit"; // enum alternative
 
 @Entity({ name: "NoteShare" })
 @Unique(["noteId", "userId"]) // @@unique([noteId, userId])

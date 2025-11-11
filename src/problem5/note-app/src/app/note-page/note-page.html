@@ -29,7 +29,90 @@
                     Cancel
                 </button>
             </ng-container>
+            <button
+                *ngIf="note?.accessRole === 'owner'"
+                type="button"
+                class="share-button"
+                (click)="toggleSharePanel()"
+                [attr.aria-expanded]="sharePanelOpen"
+            >
+                {{ sharePanelOpen ? 'Close sharing' : 'Share' }}
+            </button>
         </div>
+    </div>
+
+    <div class="share-panel" *ngIf="sharePanelOpen">
+        <div class="share-panel__header">
+            <p class="share-panel__title">Shared with</p>
+            <button
+                type="button"
+                class="share-panel__close"
+                aria-label="Close sharing"
+            (click)="closeSharePanel()"
+            >
+                ×
+            </button>
+        </div>
+        <form class="share-panel__form" (ngSubmit)="shareWithUser()">
+            <label class="share-panel__field">
+                <span>Email</span>
+                <input
+                    required
+                    autocomplete="email"
+                    type="email"
+                    name="shareEmail"
+                    [(ngModel)]="shareEmail"
+                    placeholder="Email address"
+                />
+            </label>
+            <label class="share-panel__field">
+                <span>Role</span>
+                <select name="shareRole" [(ngModel)]="shareRole">
+                    <option *ngFor="let option of shareRoleOptions" [value]="option">
+                        {{ formatRoleLabel(option) }}
+                    </option>
+                </select>
+            </label>
+            <button
+                type="submit"
+                class="share-panel__invite"
+                [disabled]="shareSubmitting"
+            >
+                {{ shareSubmitting ? 'Inviting…' : 'Invite' }}
+            </button>
+        </form>
+        <p *ngIf="shareMessage" class="status subtle">{{ shareMessage }}</p>
+        <p *ngIf="shareError" class="status error">{{ shareError }}</p>
+        <p *ngIf="shareListLoading" class="status">Loading…</p>
+        <p *ngIf="shareListError" class="status error">{{ shareListError }}</p>
+        <ul
+            *ngIf="
+                !shareListLoading &&
+                !shareListError &&
+                shareList &&
+                shareList.length
+            "
+            class="share-panel__list"
+        >
+            <li *ngFor="let share of shareList">
+                <span class="share-list__user">
+                    <strong>{{ share.name }}</strong>
+                    <span class="share-list__email">{{ share.email }}</span>
+                </span>
+                <span class="share-role">{{ formatRoleLabel(share.role) }}</span>
+            </li>
+        </ul>
+        <p
+            *ngIf="
+                !shareListLoading &&
+                !shareListError &&
+                shareList &&
+                !shareList.length
+            "
+            class="status subtle"
+        >
+            No one.
+        </p>
     </div>
 
     <p *ngIf="collaborationMessage" class="collaboration-toast" aria-live="polite">

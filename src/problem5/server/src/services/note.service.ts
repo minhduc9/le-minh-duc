@@ -6,6 +6,7 @@ import {
     ShareNoteInput,
     UpdateNoteInput,
     ListNotesInput,
+    NoteShareListItem,
 } from "../types/note.types";
 import { ForbiddenError, NotFoundError } from "../utils/errors";
 import { NoteShare, Role } from "../models/noteShare.model";
@@ -216,9 +217,10 @@ export class NoteService {
             throw new NotFoundError("Note not found or you are not the owner");
         }
 
-        const userToShareWith = await this.userRepository.findOne({
-            where: { email: data.email },
-        });
+        const userToShareWith = await this.userRepository
+            .createQueryBuilder("user")
+            .where("LOWER(user.email) = :email", { email: data.email })
+            .getOne();
 
         if (!userToShareWith) {
             throw new NotFoundError("User to share with not found");
@@ -242,6 +244,29 @@ export class NoteService {
 
         await this.noteShareRepository.save(noteShare);
         return noteShare;
+    }
+
+    async listNoteShares(noteId: string, ownerId: string) {
+        const note = await this.noteRepository.findOne({
+            where: { id: noteId, ownerId },
+        });
+
+        if (!note) {
+            throw new NotFoundError("Note not found or you are not the owner");
+        }
+
+        const shares = await this.noteShareRepository.find({
+            where: { noteId },
+            relations: ["user"],
+        });
+
+        return shares.map<NoteShareListItem>((share) => ({
+            id: share.id,
+            email: share.user.email,
+            name: share.user.name,
+            role: share.role,
+            createdAt: share.createdAt.toISOString(),
+        }));
     }
 
     async unshareNote(

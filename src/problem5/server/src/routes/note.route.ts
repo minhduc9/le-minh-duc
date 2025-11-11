@@ -10,6 +10,7 @@ router.get("/", authenticate, noteController.getNotes);
 router.get("/:id", authenticate, noteController.getNoteById);
 router.put("/:id", authenticate, noteController.updateNote);
 router.delete("/:id", authenticate, noteController.deleteNote);
+router.get("/:id/share", authenticate, noteController.listShares);
 router.post("/:id/share", authenticate, noteController.shareNote);
 router.delete("/:id/share/:email", authenticate, noteController.unshareNote);
 
