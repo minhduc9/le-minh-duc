@@ -1,29 +1,33 @@
-<section class="home-shell" aria-live="polite">
-  <header class="home-hero">
-    <p class="eyebrow">Live workspace</p>
-    <h2>Everything you capture stays ready for action</h2>
-    <p class="home-lede">
-      Notes sync instantly, stay encrypted, and let you surface insights before the idea fades.
-      Breeze through moments with a calm, adaptable layout that keeps the focus on the work.
-    </p>
-    <div class="hero-actions">
-      <button type="button" class="primary">New quick note</button>
-      <button type="button" class="ghost">View shared spaces</button>
+<section class="notes-page" aria-live="polite">
+    <div class="notes-header">
+        <h2>Notes board</h2>
+        <p>Showing {{ notes.length }} {{ notes.length === 1 ? 'note' : 'notes' }}</p>
     </div>
-  </header>
 
-  <div class="insight-grid">
-    <article *ngFor="let insight of insights">
-      <p class="label">{{ insight.label }}</p>
-      <p class="value">{{ insight.value }}</p>
-      <p class="detail">{{ insight.detail }}</p>
-    </article>
-  </div>
+    <div class="notes-grid">
+        <article *ngFor="let note of notes" class="note-card" (click)="selectNote(note)">
+            <p class="note-title">{{ note.title }}</p>
+        <p class="note-owner">Owner</p>
+            <p class="note-access">{{ note.accessRole }}</p>
+            <p class="note-meta">Updated {{ formatDate(note.updatedAt) }}</p>
+        </article>
+    </div>
 
-  <div class="highlight-grid">
-    <article *ngFor="let highlight of highlights">
-      <h3>{{ highlight.title }}</h3>
-      <p>{{ highlight.copy }}</p>
-    </article>
-  </div>
+    <div class="notes-placeholder" *ngIf="!notes.length && !loading">
+        No notes yet — create one from the server to see it appear here.
+    </div>
+
+    <div class="notes-footer">
+        <button
+            *ngIf="hasMore && notes.length"
+            type="button"
+            class="load-more"
+            (click)="loadNotes()"
+            [disabled]="loading"
+        >
+            Load more
+        </button>
+        <span class="loading" *ngIf="loading">Loading…</span>
+        <span class="error" *ngIf="errorMessage">{{ errorMessage }}</span>
+    </div>
 </section>

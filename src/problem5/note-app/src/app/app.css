@@ -181,3 +181,16 @@
         grid-template-columns: 1fr;
     }
 }
+
+.home-layout {
+    min-height: 100vh;
+    width: 100%;
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    background: radial-gradient(circle at top right, rgba(104, 247, 255, 0.25), transparent 48%),
+        radial-gradient(circle at 10% 20%, rgba(124, 99, 255, 0.28), transparent 42%),
+        linear-gradient(180deg, #030614 0%, #01030a 40%, #050711 100%);
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    color: inherit;
+}

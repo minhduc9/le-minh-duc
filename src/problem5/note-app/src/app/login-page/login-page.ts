@@ -26,7 +26,7 @@ export class LoginPage {
             .subscribe(
                 (res: any) => {
                     localStorage.setItem('token', res.token);
-                    this.router.navigate(['/']);
+                    this.router.navigate(['/home']);
                 },
                 (err) => {
                     console.error(err);
