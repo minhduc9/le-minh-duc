@@ -13,7 +13,7 @@ participant "Other Clients" as OTHERS
 
 == Action Initiation Phase ==
 note over Client,OTHERS
-Client starts an action and receives a single-use actionToken
+    Client starts an action and receives a single-use actionToken
 end note
 
 Client -> APIGW: POST /api/v1/actions/start
@@ -41,25 +41,25 @@ group Validation
             SCORE --> Client: 403 Invalid action token
         else Token present
             REDIS --> SCORE: { userId, createdAt, expiresAt }
-        alt userId mismatch
-            SCORE --> Client: 401 Unauthorized
-        else userId matches
-            SCORE -> SCORE: Verify action completion (server-side)
-            alt Action not completed
-                SCORE --> Client: 403 Action not completed
-            else Action completed
-                SCORE -> REDIS: DEL action:{actionId} (mark used)
-                SCORE -> DB: UPDATE user_scores\nSET score = score + X,\n    version = version + 1\nWHERE user_id = userId
-                DB --> SCORE: Success
-                SCORE -> REDIS: ZADD leaderboard {score} {userId}
-                REDIS --> SCORE: Rank updated
-                SCORE -> REDIS: PUBLISH leaderboard:update { userId, newScore, changedRanks }
-                REDIS -> WSS: leaderboard:update
-                SCORE --> Client: 200 OK { newScore, newRank }
-                WSS -> OTHERS: Broadcast leaderboard:update
-                WSS -> Client: Broadcast leaderboard:update
+            alt userId mismatch
+                SCORE --> Client: 401 Unauthorized
+            else userId matches
+                SCORE -> SCORE: Verify action completion (server-side)
+                alt Action not completed
+                    SCORE --> Client: 403 Action not completed
+                else Action completed
+                    SCORE -> REDIS: DEL action:{actionId} (mark used)
+                    SCORE -> DB: UPDATE user_scores\nSET score = score + X,\n    version = version + 1\nWHERE user_id = userId
+                    DB --> SCORE: Success
+                    SCORE -> REDIS: ZADD leaderboard {score} {userId}
+                    REDIS --> SCORE: Rank updated
+                    SCORE -> REDIS: PUBLISH leaderboard:update { userId, newScore, changedRanks }
+                    REDIS -> WSS: leaderboard:update
+                    SCORE --> Client: 200 OK { newScore, newRank }
+                    WSS -> OTHERS: Broadcast leaderboard:update
+                    WSS -> Client: Broadcast leaderboard:update
+                end
             end
-        end
         end
     end
 end
