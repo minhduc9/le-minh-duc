@@ -26,8 +26,8 @@ This module provides a real-time scoreboard system that displays the top 10 user
 
 Two sequence diagrams are provided to illustrate the system flow:
 
-1. **diagram/scoreboard-api-sequence.puml**: Complete score update flow with security validation
-2. **websocket-live-updates.puml**: WebSocket connection management and live update broadcasting
+1. **[scoreboard-api-sequence.puml](../problem6/diagrams/scoreboard-api-sequence.puml)**: Complete score update flow with security validation - [image](../problem6/rendered/scoreboard%20API.svg)
+2. **[websocket-live-updates.puml](../problem6/diagrams/websocket-live-updates.puml)**: WebSocket connection management and live update broadcasting - [image](../problem6/rendered/scoreboard%20WSS.svg)
 
 ## How It Works
 

@@ -19,32 +19,33 @@ function sum_to_n_a(n: number): number {
 }
 
 /**
- * Implementation B: Imperative/Mutable Approach
+ * Implementation B: Iterative Loop Approach
  *
- * Creates an array of numbers [1, 2, ..., n] and uses forEach to
- * accumulate the sum by mutating an external variable.
+ * Uses a traditional for loop to accumulate the sum by iterating
+ * from 1 to n without creating intermediate data structures.
  *
  * Time Complexity: O(n) - Linear time, iterates through n elements
- * Space Complexity: O(n) - Linear space, creates an array of size n
+ * Space Complexity: O(1) - Constant space, only uses a single accumulator variable
  *
  * IMPERATIVE PROGRAMMING PARADIGM:
- * - Uses mutable state: The `sum` variable is declared and modified
- *   throughout the iteration
- * - Side effects: The forEach callback modifies the external `sum` variable,
- *   causing side effects outside the function's scope
- * - Not referentially transparent: The closure captures and mutates `sum`
- * - Imperative style: Tells the computer HOW to compute (step-by-step mutations)
+ * - Uses mutable state: The `sum` variable is modified in each iteration
+ * - More space-efficient than array-based approaches (no O(n) array allocation)
+ * - Traditional procedural style with explicit iteration control
+ * - Trade-off: Better space efficiency but loses functional programming benefits
+ *   (immutability, composability, declarative style)
  *
- * This approach violates functional programming principles because:
- * 1. It mutates state (sum += val)
- * 2. The forEach callback is not a pure function (it has side effects)
- * 3. It's harder to reason about due to mutable state
+ * This is the most practical O(n) solution for large values of n, as it avoids
+ * the memory overhead of creating an array while maintaining linear time complexity.
  */
 function sum_to_n_b(n: number): number {
+    if (n <= 0) {
+        return 0;
+    }
+
     let sum = 0;
-    Array.from({ length: n }, (_, i) => i + 1).forEach((val) => {
-        sum += val;
-    });
+    for (let i = 1; i <= n; i++) {
+        sum += i;
+    }
 
     return sum;
 }
