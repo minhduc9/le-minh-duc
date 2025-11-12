@@ -386,7 +386,11 @@ export class NotePage implements OnInit, OnDestroy {
                 next: (updatedNote) => {
                     this.saving = false;
                     this.editing = false;
-                    this.syncNoteView(updatedNote);
+                    const normalized: NoteDetail = {
+                        ...updatedNote,
+                        accessRole: this.note?.accessRole ?? 'owner',
+                    };
+                    this.syncNoteView(normalized);
                     this.cdr.markForCheck();
                 },
                 error: (error) => {
