@@ -1,0 +1,67 @@
+@startuml scoreboard API
+title Score Update - Full Flow (JWT + Single-Use Action Token + WebSocket Broadcast)
+autonumber
+
+actor Client
+participant "API Gateway" as APIGW
+participant "Auth Service" as AUTH
+participant "Score Service" as SCORE
+database "Database" as DB
+collections "Redis" as REDIS
+participant "WebSocket Server" as WSS
+participant "Other Clients" as OTHERS
+
+== Action Initiation Phase ==
+note over Client,OTHERS
+Client starts an action and receives a single-use actionToken
+end note
+
+Client -> APIGW: POST /api/v1/actions/start
+APIGW -> AUTH: Validate JWT
+AUTH --> APIGW: Token valid
+APIGW -> SCORE: Create action token (userId, actionId)
+SCORE -> REDIS: SET action:{actionId} = {userId, createdAt, expiresAt}\nEX 60
+REDIS --> SCORE: OK
+SCORE --> Client: { actionId, actionToken }
+
+== Action Completion Phase ==
+Client -> APIGW: POST /api/v1/scoreboard/update { actionToken }
+APIGW -> AUTH: Validate JWT
+AUTH --> APIGW: Token valid (userId)
+APIGW -> SCORE: UpdateScore(userId, actionId, actionToken)
+
+group Validation
+    SCORE -> REDIS: INCR rate:{userId}:{minute}\nEXPIRE 60
+    alt Rate limit exceeded
+        SCORE --> Client: 429 Too Many Requests
+    else Within limit
+        SCORE -> REDIS: GET action:{actionId}
+        alt Token missing / expired / used
+            REDIS --> SCORE: null / invalid
+            SCORE --> Client: 403 Invalid action token
+        else Token present
+            REDIS --> SCORE: { userId, createdAt, expiresAt }
+        alt userId mismatch
+            SCORE --> Client: 401 Unauthorized
+        else userId matches
+            SCORE -> SCORE: Verify action completion (server-side)
+            alt Action not completed
+                SCORE --> Client: 403 Action not completed
+            else Action completed
+                SCORE -> REDIS: DEL action:{actionId} (mark used)
+                SCORE -> DB: UPDATE user_scores\nSET score = score + X,\n    version = version + 1\nWHERE user_id = userId
+                DB --> SCORE: Success
+                SCORE -> REDIS: ZADD leaderboard {score} {userId}
+                REDIS --> SCORE: Rank updated
+                SCORE -> REDIS: PUBLISH leaderboard:update { userId, newScore, changedRanks }
+                REDIS -> WSS: leaderboard:update
+                SCORE --> Client: 200 OK { newScore, newRank }
+                WSS -> OTHERS: Broadcast leaderboard:update
+                WSS -> Client: Broadcast leaderboard:update
+            end
+        end
+        end
+    end
+end
+
+@enduml

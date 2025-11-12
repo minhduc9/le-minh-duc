@@ -1,0 +1,87 @@
+@startuml scoreboard WSS
+title WebSocket Live Updates & Heartbeat (Multi-Client Broadcast)
+autonumber
+
+actor "Client A" as CA
+actor "Client B" as CB
+actor "Client C" as CC
+participant "WebSocket Server" as WSS
+collections "Redis Pub/Sub" as REDIS
+participant "Score Service" as SCORE
+
+== Connection Phase ==
+CA -> WSS: Connect WS /api/v1/scoreboard/live?token=JWT
+WSS -> WSS: (Optional) Validate JWT
+WSS --> CA: Connection established (101 Switching Protocols)
+WSS -> CA: Initial leaderboard snapshot (Top 10)
+
+CB -> WSS: Connect WS /api/v1/scoreboard/live?token=JWT
+WSS --> CB: Connection established (101)
+WSS -> CB: Initial leaderboard snapshot
+
+CC -> WSS: Connect WS /api/v1/scoreboard/live?token=JWT
+WSS --> CC: Connection established (101)
+WSS -> CC: Initial leaderboard snapshot
+
+note over WSS
+WebSocket Server maintains
+a pool of active connections
+end note
+
+== Live Update Broadcasting ==
+loop Continuous updates
+    SCORE -> REDIS: PUBLISH leaderboard:update\n{ userId, newScore, changedRanks }
+    REDIS -> WSS: Event received
+    WSS -> WSS: Debounce (<=500ms) &\nprocess differential update
+    
+    par Broadcast to all connected clients
+        WSS -> CA: leaderboard:update { diff }
+        WSS -> CB: leaderboard:update { diff }
+        WSS -> CC: leaderboard:update { diff }
+    end
+    
+    note right of WSS
+    Only send differential updates
+    (changed ranks) not full leaderboard
+    end note
+end
+
+== Heartbeat Mechanism ==
+loop Every 30 seconds
+    par Ping all clients
+        WSS -> CA: PING
+        WSS -> CB: PING
+        WSS -> CC: PING
+    end
+    
+    alt Client A responds
+        CA -> WSS: PONG
+    else Timeout (10s)
+        WSS -> WSS: Close connection for Client A
+        note right: Remove from active pool
+    end
+    
+    alt Client B responds
+        CB -> WSS: PONG
+    else Timeout (10s)
+        WSS -> WSS: Close connection for Client B
+    end
+    
+    alt Client C responds
+        CC -> WSS: PONG
+    else Timeout (10s)
+        WSS -> WSS: Close connection for Client C
+    end
+end
+
+== Client Disconnection ==
+CA -> WSS: Close connection
+WSS -> WSS: Remove Client A from pool
+WSS --> CA: Connection closed (1000)
+
+note over CA,CC
+Clients can reconnect anytime
+and receive current leaderboard state
+end note
+
+@enduml
