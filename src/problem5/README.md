@@ -51,4 +51,12 @@ The API reads these variables on boot, so missing values will prevent the server
 - **Realtime collaboration**: The client joins a Socket.IO room per note. When someone saves edits, other open sessions receive the update instantly, along with a banner indicating another collaborator just synced. Version numbers protect against editing conflicts and the UI lets you toggle between edit and markdown-rendered preview modes.
 - **Data & caching**: Postgres stores users, notes, and share metadata. Redis backs session-like data and the realtime broker used by the API.
 
+## Backend Tech Stack
+
+- **TypeORM + PostgreSQL**: Data modeling, migrations, and persistence for users, notes, and share links.
+- **Redis + BullMQ**: Fast cache/queue foundation for collaboration events and background jobs.
+- **Socket.IO**: WebSocket transport that streams real-time note updates to every participant.
+- **Zod**: Runtime validation for request payloads before they hit the database.
+- **JSON Web Tokens + bcryptjs**: Password hashing plus stateless auth for secure login flows.
+
 That is all you need - `docker compose up --build` handles the entire stack so you can focus on exploring or extending the collaborative note experience.
