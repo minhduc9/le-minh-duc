@@ -7,6 +7,24 @@ This workspace bundles the Angular client (`note-app`), an API server, and the b
 - Docker Desktop or Docker Engine with the Compose plugin
 - Ports `4200`, `3000`, `5432`, and `6379` available on your host
 
+### Important: server `.env`
+
+Create `src/problem5/server/.env` before starting anything:
+
+```env
+DB_HOST="localhost"
+DB_PORT=5432
+DB_PASSWORD="password"
+DB_NAME="collab_notes"
+JWT_SECRET="your_jwt_secret_key"
+PORT=3000
+REDIS_HOST="127.0.0.1"
+REDIS_PORT=6379
+CLIENT_ORIGIN="http://localhost:4200"
+```
+
+The API reads these variables on boot, so missing values will prevent the server from starting.
+
 ## Quick Start
 
 1. From the repo root jump into the problem directory:

@@ -14,6 +14,8 @@ interface NoteListItem {
     content?: unknown;
 }
 
+type NoteCreationResponse = Omit<NoteListItem, 'accessRole'>;
+
 @Component({
     selector: 'app-home-page',
     standalone: true,
@@ -30,6 +32,7 @@ export class HomePage implements OnInit {
     offset = 0;
     hasMore = true;
     deletingNoteId?: string;
+    creating = false;
 
     constructor(
         private http: HttpClient,
@@ -81,6 +84,46 @@ export class HomePage implements OnInit {
                 error: () => {
                     this.errorMessage = 'Unable to load notes right now.';
                     this.loading = false;
+                    this.cdr.markForCheck();
+                },
+            });
+    }
+
+    createNote() {
+        if (!this.token) {
+            this.errorMessage = 'Session expired. Please log in again.';
+            this.cdr.markForCheck();
+            return;
+        }
+
+        if (this.creating) {
+            return;
+        }
+
+        this.creating = true;
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${this.token}`);
+        const payload = {
+            title: this.buildDefaultTitle(),
+        };
+
+        this.http
+            .post<NoteCreationResponse>('http://localhost:3000/notes', payload, {
+                headers,
+            })
+            .subscribe({
+                next: (note) => {
+                    const normalized = this.normalizeCreatedNote(note);
+                    this.notes = [normalized, ...this.notes.filter((item) => item.id !== normalized.id)];
+                    this.selectedNote = normalized;
+                    this.offset += 1;
+                    this.creating = false;
+                    this.errorMessage = undefined;
+                    this.cdr.markForCheck();
+                    this.router.navigate(['/note', normalized.id]);
+                },
+                error: () => {
+                    this.errorMessage = 'Unable to create a note right now.';
+                    this.creating = false;
                     this.cdr.markForCheck();
                 },
             });
@@ -148,6 +191,19 @@ export class HomePage implements OnInit {
         }
 
         return text.length > 140 ? `${text.slice(0, 140)}…` : text;
+    }
+
+    private buildDefaultTitle() {
+        const untitledBase = 'Untitled note';
+        const suffix = this.notes.length ? ` #${this.notes.length + 1}` : '';
+        return `${untitledBase}${suffix}`.trim();
+    }
+
+    private normalizeCreatedNote(note: NoteCreationResponse): NoteListItem {
+        return {
+            ...note,
+            accessRole: 'owner',
+        };
     }
 
     private extractPlainText(content?: unknown): string {

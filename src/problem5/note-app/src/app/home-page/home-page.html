@@ -1,7 +1,12 @@
 <section class="notes-page" aria-live="polite">
     <div class="notes-header">
-        <h2>Notes board</h2>
-        <p>Showing {{ notes.length }} {{ notes.length === 1 ? 'note' : 'notes' }}</p>
+        <div class="notes-header__info">
+            <h2>Notes board</h2>
+            <p>Showing {{ notes.length }} {{ notes.length === 1 ? 'note' : 'notes' }}</p>
+        </div>
+        <button type="button" class="create-note" (click)="createNote()" [disabled]="creating">
+            {{ creating ? 'Creating…' : 'New note' }}
+        </button>
     </div>
 
     <div class="notes-grid">
@@ -30,7 +35,7 @@
     </div>
 
     <div class="notes-placeholder" *ngIf="!notes.length && !loading">
-        No notes yet — create one from the server to see it appear here.
+        No notes yet — use "New note" to start writing.
     </div>
 
     <div class="notes-footer">
